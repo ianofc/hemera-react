@@ -152,10 +152,10 @@ export default function Dashboard() {
                 <i className="fas fa-brain" /> Assistente IA
               </span>
               <h3 className="text-3xl font-bold font-display">Crie aulas, provas e atividades em segundos.</h3>
-              <p className="text-white/80 max-w-lg">Use o Zios para gerar planejamentos pedagógicos alinhados à BNCC.</p>
-              <button className="mt-2 w-fit flex items-center gap-2 px-6 py-3 font-bold transition bg-white shadow-xl text-violet-700 rounded-xl hover:-translate-y-1">
+              <p className="text-white/80 max-w-lg">Use o Hemera Intelligence para gerar planejamentos e materiais ricos em minutos.</p>
+              <Link to="/professor/intelligence" className="mt-2 w-fit flex items-center gap-2 px-6 py-3 font-bold transition bg-white shadow-xl text-violet-700 rounded-xl hover:-translate-y-1">
                 <i className="fas fa-sparkles" /> Começar agora
-              </button>
+              </Link>
             </div>
           </div>
         </div>

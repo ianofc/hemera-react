@@ -11,6 +11,7 @@ import ProfessorLayout from "./layouts/ProfessorLayout";
 import AlunoLayout from "./layouts/AlunoLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import Dashboard from "./pages/professor/Dashboard";
+import IntelligenceDashboard from "./pages/professor/IntelligenceDashboard";
 import Turmas from "./pages/professor/Turmas";
 import TurmaForm from "./pages/professor/TurmaForm";
 import TurmaDetalhe from "./pages/professor/TurmaDetalhe";
@@ -18,6 +19,7 @@ import * as P from "./pages/professor/MockPages";
 import * as A from "./pages/aluno/MockPages";
 import * as Ad from "./pages/admin/MockPages";
 import * as S from "./pages/shared/SharedPages";
+import GradebookReal from "./pages/professor/GradebookReal";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,7 @@ const App = () => (
 
             <Route path="/professor" element={<ProfessorLayout />}>
               <Route index element={<Dashboard />} />
+              <Route path="intelligence" element={<IntelligenceDashboard />} />
               <Route path="turmas" element={<Turmas />} />
               <Route path="turmas/nova" element={<TurmaForm />} />
               <Route path="turmas/:id" element={<TurmaDetalhe />} />
@@ -46,8 +49,8 @@ const App = () => (
               <Route path="avaliacoes/:id" element={<P.ProfAvaliacaoDetalhe />} />
               <Route path="notas/lancamento" element={<P.ProfLancamentoNotas />} />
               <Route path="notas/revisao" element={<P.ProfRevisaoNotas />} />
-              <Route path="gradebook" element={<P.ProfGradebook />} />
-              <Route path="gradebook/turma/:id" element={<P.ProfGradebookTurma />} />
+              <Route path="gradebook" element={<GradebookReal />} />
+              <Route path="gradebook/turma/:id" element={<GradebookReal />} />
               <Route path="gradebook/aluno/:id" element={<P.ProfGradebookAluno />} />
               <Route path="frequencia" element={<P.ProfFrequencia />} />
               <Route path="frequencia/chamada" element={<P.ProfChamada />} />

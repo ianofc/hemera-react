@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-interface Turma { id: string; nome: string; ano_letivo: number; periodo: string }
+import { pedagogicoService, Turma } from "@/services/pedagogicoService";
 
 export default function Turmas() {
   const [turmas, setTurmas] = useState<Turma[]>([]);
@@ -13,9 +12,14 @@ export default function Turmas() {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("turmas").select("*").order("created_at", { ascending: false });
-    if (error) toast.error(error.message); else setTurmas(data as Turma[]);
-    setLoading(false);
+    try {
+      const data = await pedagogicoService.getTurmasProfessor();
+      setTurmas(data);
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const remover = async (id: string) => {
