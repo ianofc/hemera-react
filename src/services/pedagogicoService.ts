@@ -1,6 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { PlanoDeAula } from '@/types';
 
+// ─── Interfaces ────────────────────────────────────────────────────────────────
+
 export interface Turma {
   id: string;
   nome: string;
@@ -9,21 +11,21 @@ export interface Turma {
   professor_id: string;
 }
 
+export interface Disciplina {
+  id: string;
+  nome: string;
+  turma_id: string;
+  professor_id: string;
+}
+
 export interface Aluno {
   id: string;
   nome: string;
   matricula: string | null;
-  turma_id: string;
   email: string | null;
+  turma_id: string;
   nota_media: number;
   taxa_frequencia: number;
-}
-
-export interface Disciplina {
-  id: string;
-  turma_id: string;
-  professor_id: string;
-  nome: string;
 }
 
 export interface Atividade {
@@ -45,32 +47,53 @@ export interface Nota {
   feedback: string | null;
 }
 
-async function uid(): Promise<string> {
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) throw new Error('Usuário não autenticado');
+export interface PostagemMural {
+  id: string;
+  turma_id: string;
+  professor_id: string;
+  texto: string;
+  arquivo_nome: string | null;
+  created_at: string;
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+async function getProfessorId(): Promise<string> {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) throw new Error('Usuário não autenticado');
   return data.user.id;
 }
 
+// ─── Service ───────────────────────────────────────────────────────────────────
+
 export const pedagogicoService = {
-  // --- TURMAS ---
+
+  // ── TURMAS ──────────────────────────────────────────────────────────────────
+
   async getTurmasProfessor(): Promise<Turma[]> {
-    const u = await uid();
+    const professorId = await getProfessorId();
     const { data, error } = await supabase
       .from('turmas')
       .select('*')
-      .eq('professor_id', u)
+      .eq('professor_id', professorId)
       .order('nome');
     if (error) throw error;
-    return (data || []) as Turma[];
+    return data || [];
   },
 
-  async getTurmaById(id: string): Promise<Turma | null> {
-    const { data, error } = await supabase.from('turmas').select('*').eq('id', id).maybeSingle();
+  async criarTurma(nome: string, anoLetivo: number, periodo: string): Promise<Turma> {
+    const professorId = await getProfessorId();
+    const { data, error } = await supabase
+      .from('turmas')
+      .insert([{ nome, ano_letivo: anoLetivo, periodo, professor_id: professorId }])
+      .select()
+      .single();
     if (error) throw error;
-    return data as Turma | null;
+    return data;
   },
 
-  // --- DISCIPLINAS ---
+  // ── DISCIPLINAS ─────────────────────────────────────────────────────────────
+
   async getDisciplinasTurma(turmaId: string): Promise<Disciplina[]> {
     const { data, error } = await supabase
       .from('disciplinas')
@@ -78,21 +101,11 @@ export const pedagogicoService = {
       .eq('turma_id', turmaId)
       .order('nome');
     if (error) throw error;
-    return (data || []) as Disciplina[];
+    return data || [];
   },
 
-  async criarDisciplina(turmaId: string, nome: string): Promise<Disciplina> {
-    const u = await uid();
-    const { data, error } = await supabase
-      .from('disciplinas')
-      .insert([{ turma_id: turmaId, professor_id: u, nome }])
-      .select()
-      .single();
-    if (error) throw error;
-    return data as Disciplina;
-  },
+  // ── ALUNOS ──────────────────────────────────────────────────────────────────
 
-  // --- ALUNOS ---
   async getAlunosTurma(turmaId: string): Promise<Aluno[]> {
     const { data, error } = await supabase
       .from('alunos')
@@ -100,86 +113,102 @@ export const pedagogicoService = {
       .eq('turma_id', turmaId)
       .order('nome');
     if (error) throw error;
-    return (data || []) as Aluno[];
+    return data || [];
   },
 
-  // --- FREQUÊNCIA ---
+  // ── FREQUÊNCIA ──────────────────────────────────────────────────────────────
+
+  /**
+   * Registra frequência de uma turma para uma data.
+   * Faz upsert real na tabela `frequencias` por (aluno_id, data).
+   * disciplina_id é opcional (nullable no schema).
+   */
   async registrarFrequencia(
     turmaId: string,
     dataAula: string,
     presencas: Record<string, boolean>,
-  ) {
-    const u = await uid();
-    const rows = Object.entries(presencas).map(([aluno_id, presente]) => ({
-      aluno_id,
-      turma_id: turmaId,
-      professor_id: u,
+    disciplinaId?: string,
+  ): Promise<void> {
+    const registros = Object.entries(presencas).map(([alunoId, presente]) => ({
+      aluno_id: alunoId,
+      disciplina_id: disciplinaId ?? null,
       data: dataAula,
       presente,
     }));
-    if (rows.length === 0) return true;
+
+    if (registros.length === 0) return;
+
     const { error } = await supabase
       .from('frequencias')
-      .upsert(rows, { onConflict: 'aluno_id,turma_id,data' });
-    if (error) throw error;
-    return true;
+      .upsert(registros, { onConflict: 'aluno_id, disciplina_id, data', ignoreDuplicates: false });
+
+    if (error) {
+      // Se falhar por constraint (disciplina_id null não suportado no unique), tenta sem disciplina_id
+      const registrosSemDisc = Object.entries(presencas).map(([alunoId, presente]) => ({
+        aluno_id: alunoId,
+        data: dataAula,
+        presente,
+      }));
+      const { error: error2 } = await supabase
+        .from('frequencias')
+        .upsert(registrosSemDisc, { onConflict: 'aluno_id, data', ignoreDuplicates: false });
+      if (error2) throw error2;
+    }
+
+    // Atualiza taxa_frequencia nos alunos
+    for (const alunoId of Object.keys(presencas)) {
+      const { data: freqs } = await supabase
+        .from('frequencias')
+        .select('presente')
+        .eq('aluno_id', alunoId);
+      if (freqs && freqs.length > 0) {
+        const presentes = freqs.filter(f => f.presente).length;
+        const taxa = Math.round((presentes / freqs.length) * 100);
+        await supabase
+          .from('alunos')
+          .update({ taxa_frequencia: taxa })
+          .eq('id', alunoId);
+      }
+    }
+
+    void turmaId; // usado externamente para contexto
   },
 
-  async getFrequenciaDia(turmaId: string, data: string) {
-    const { data: rows, error } = await supabase
-      .from('frequencias')
-      .select('aluno_id, presente')
-      .eq('turma_id', turmaId)
-      .eq('data', data);
-    if (error) throw error;
-    return rows || [];
-  },
+  // ── ATIVIDADES ──────────────────────────────────────────────────────────────
 
-  // --- ATIVIDADES ---
   async getAtividadesTurma(turmaId: string): Promise<Atividade[]> {
     const { data, error } = await supabase
       .from('atividades')
       .select('*')
       .eq('turma_id', turmaId)
-      .order('data_entrega', { ascending: false });
-    if (error) throw error;
-    return (data || []) as Atividade[];
+      .order('data_entrega');
+    if (error) {
+      console.warn('Tabela atividades pode não existir.', error);
+      return [];
+    }
+    return data || [];
   },
 
-  async criarAtividade(payload: {
-    turma_id: string;
-    titulo: string;
-    descricao?: string;
-    data_entrega: string;
-    disciplina_id?: string | null;
-    valor_maximo?: number;
-  }): Promise<Atividade> {
-    const u = await uid();
+  async criarAtividade(
+    atividade: Omit<Atividade, 'id' | 'professor_id'>
+  ): Promise<Atividade> {
+    const professorId = await getProfessorId();
     const { data, error } = await supabase
       .from('atividades')
-      .insert([
-        {
-          turma_id: payload.turma_id,
-          titulo: payload.titulo,
-          descricao: payload.descricao ?? null,
-          data_entrega: payload.data_entrega,
-          disciplina_id: payload.disciplina_id ?? null,
-          valor_maximo: payload.valor_maximo ?? 10,
-          professor_id: u,
-        },
-      ])
+      .insert([{ ...atividade, professor_id: professorId }])
       .select()
       .single();
     if (error) throw error;
-    return data as Atividade;
+    return data;
   },
 
-  async excluirAtividade(id: string) {
+  async deletarAtividade(id: string): Promise<void> {
     const { error } = await supabase.from('atividades').delete().eq('id', id);
     if (error) throw error;
   },
 
-  // --- NOTAS ---
+  // ── NOTAS ───────────────────────────────────────────────────────────────────
+
   async getNotasTurma(turmaId: string) {
     const { data, error } = await supabase
       .from('notas')
@@ -199,36 +228,43 @@ export const pedagogicoService = {
       .from('notas')
       .upsert(
         { aluno_id: alunoId, atividade_id: atividadeId, valor, feedback },
-        { onConflict: 'aluno_id,atividade_id' },
+        { onConflict: 'aluno_id, atividade_id' }
       )
       .select();
     if (error) throw error;
+
+    // Recalcula nota_media do aluno
+    const { data: notas } = await supabase
+      .from('notas')
+      .select('valor')
+      .eq('aluno_id', alunoId);
+    if (notas && notas.length > 0) {
+      const media = notas.reduce((acc, n) => acc + Number(n.valor), 0) / notas.length;
+      await supabase.from('alunos').update({ nota_media: media }).eq('id', alunoId);
+    }
+
     return data;
   },
 
-  // --- GRADEBOOK MATRIX ---
+  // ── GRADEBOOK ───────────────────────────────────────────────────────────────
+
   async getGradebookMatrix(turmaId: string) {
-    const [alunos, atividades, notasFlat] = await Promise.all([
-      this.getAlunosTurma(turmaId),
-      this.getAtividadesTurma(turmaId),
-      this.getNotasTurma(turmaId),
-    ]);
+    const alunos = await this.getAlunosTurma(turmaId);
+    const atividades = await this.getAtividadesTurma(turmaId);
+    const notasFlat = await this.getNotasTurma(turmaId);
 
     const mapaNotas: Record<string, Record<string, number | null>> = {};
-    notasFlat.forEach((nota: { aluno_id: string; atividade_id: string; valor: number }) => {
+    notasFlat.forEach(nota => {
       if (!mapaNotas[nota.aluno_id]) mapaNotas[nota.aluno_id] = {};
-      mapaNotas[nota.aluno_id][nota.atividade_id] = Number(nota.valor);
+      mapaNotas[nota.aluno_id][nota.atividade_id] = nota.valor;
     });
 
-    const tabelaNotas = alunos.map((aluno) => {
+    const tabelaNotas = alunos.map(aluno => {
       let soma = 0;
       let pesos = 0;
-      const notasAluno = atividades.map((atividade) => {
+      const notasAluno = atividades.map(atividade => {
         const valor = mapaNotas[aluno.id]?.[atividade.id] ?? null;
-        if (valor !== null) {
-          soma += valor;
-          pesos += 1;
-        }
+        if (valor !== null) { soma += Number(valor); pesos += 1; }
         return { atividade_id: atividade.id, valor };
       });
       const media = pesos > 0 ? (soma / pesos).toFixed(1) : '-';
@@ -238,28 +274,77 @@ export const pedagogicoService = {
     return { atividades, tabelaNotas };
   },
 
-  // --- PLANOS DE AULA ---
+  // ── MURAL ───────────────────────────────────────────────────────────────────
+
+  async getPostagensMural(turmaId: string): Promise<PostagemMural[]> {
+    const { data, error } = await supabase
+      .from('postagens_mural')
+      .select('*')
+      .eq('turma_id', turmaId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.warn('Tabela postagens_mural pode não existir.', error);
+      return [];
+    }
+    return data || [];
+  },
+
+  async criarPostagemMural(
+    turmaId: string,
+    texto: string,
+    arquivoNome?: string,
+  ): Promise<PostagemMural> {
+    const professorId = await getProfessorId();
+    const { data, error } = await supabase
+      .from('postagens_mural')
+      .insert([{
+        turma_id: turmaId,
+        professor_id: professorId,
+        texto,
+        arquivo_nome: arquivoNome ?? null,
+      }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  // ── DIÁRIO DE CLASSE ────────────────────────────────────────────────────────
+
+  async upsertDiario(planoId: string, diarioRegistro: string): Promise<void> {
+    const { error } = await supabase
+      .from('planos_aula')
+      .update({ diario_registro: diarioRegistro, status: 'Ministrada' })
+      .eq('id', planoId);
+    if (error) throw error;
+  },
+
+  // ── PLANOS DE AULA ──────────────────────────────────────────────────────────
+
   async getPlanosDeAula(turmaId: string): Promise<PlanoDeAula[]> {
     const { data, error } = await supabase
       .from('planos_aula')
       .select('*')
       .eq('turma_id', turmaId)
       .order('data_prevista', { ascending: false });
-    if (error) throw error;
-    return (data || []) as unknown as PlanoDeAula[];
+    if (error) {
+      console.warn('Tabela planos_aula pode não existir.', error);
+      return [];
+    }
+    return data || [];
   },
 
   async criarPlanoDeAula(
-    plano: Omit<PlanoDeAula, 'id' | 'created_at' | 'updated_at'>,
+    plano: Omit<PlanoDeAula, 'id' | 'created_at'>
   ): Promise<PlanoDeAula> {
-    const u = await uid();
+    const professorId = await getProfessorId();
     const { data, error } = await supabase
       .from('planos_aula')
-      .insert([{ ...plano, professor_id: u }])
+      .insert([{ ...plano, professor_id: professorId }])
       .select()
       .single();
     if (error) throw error;
-    return data as unknown as PlanoDeAula;
+    return data;
   },
 
   async atualizarPlano(id: string, updates: Partial<PlanoDeAula>): Promise<PlanoDeAula> {
@@ -270,70 +355,21 @@ export const pedagogicoService = {
       .select()
       .single();
     if (error) throw error;
-    return data as unknown as PlanoDeAula;
-  },
-
-  // --- DIÁRIO DE CLASSE ---
-  async getDiarioTurma(turmaId: string) {
-    const { data, error } = await supabase
-      .from('diario_classe')
-      .select('*')
-      .eq('turma_id', turmaId)
-      .order('data', { ascending: false });
-    if (error) throw error;
-    return data || [];
-  },
-
-  async upsertDiario(turmaId: string, data: string, conteudo: string, observacoes?: string) {
-    const u = await uid();
-    const { data: row, error } = await supabase
-      .from('diario_classe')
-      .upsert(
-        { turma_id: turmaId, professor_id: u, data, conteudo, observacoes: observacoes ?? null },
-        { onConflict: 'turma_id,data' },
-      )
-      .select()
-      .single();
-    if (error) throw error;
-    return row;
-  },
-
-  // --- MURAL ---
-  async getPostagensTurma(turmaId: string) {
-    const { data, error } = await supabase
-      .from('postagens_mural')
-      .select('*')
-      .eq('turma_id', turmaId)
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    return data || [];
-  },
-
-  async criarPostagem(turmaId: string, texto: string, arquivo?: { url: string; nome: string }) {
-    const u = await uid();
-    const { data, error } = await supabase
-      .from('postagens_mural')
-      .insert([
-        {
-          turma_id: turmaId,
-          autor_id: u,
-          texto,
-          arquivo_url: arquivo?.url ?? null,
-          arquivo_nome: arquivo?.nome ?? null,
-        },
-      ])
-      .select()
-      .single();
-    if (error) throw error;
     return data;
   },
 
-  // --- IA (mantém edge functions) ---
+  async deletarPlano(id: string): Promise<void> {
+    const { error } = await supabase.from('planos_aula').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  // ── IA (Edge Functions) ──────────────────────────────────────────────────────
+
   async gerarPlanoIA(tema: string, turmaNome: string): Promise<Partial<PlanoDeAula>> {
     const { data, error } = await supabase.functions.invoke('gerar-plano-ia', {
       body: { tema, turmaNome },
     });
-    if (error) throw new Error(error.message || 'Falha ao gerar plano com IA.');
+    if (error) throw new Error('Falha ao gerar plano com IA: ' + error.message);
     return data.plano;
   },
 
@@ -341,7 +377,7 @@ export const pedagogicoService = {
     const { data, error } = await supabase.functions.invoke('gerar-prova-ia', {
       body: { turmaId, instrucoes },
     });
-    if (error) throw error;
+    if (error) throw new Error('Falha ao gerar prova com IA: ' + error.message);
     return data.prova_markdown;
   },
 };

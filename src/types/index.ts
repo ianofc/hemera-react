@@ -54,6 +54,7 @@ export interface ArtefatoIA {
 export interface PlanoDeAula {
   id: string;
   turma_id: string;
+  professor_id?: string;
   titulo: string;
   conteudo?: string;
   habilidades_bncc?: string;
@@ -65,6 +66,7 @@ export interface PlanoDeAula {
   referencias?: string;
   data_prevista: string;
   status: string;
+  diario_registro?: string;
   id_atividade_gerada?: string;
   created_at?: string;
 }

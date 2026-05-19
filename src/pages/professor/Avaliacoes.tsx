@@ -84,19 +84,20 @@ export default function Avaliacoes() {
         titulo,
         descricao,
         data_entrega: dataEntrega,
+        disciplina_id: null,  // nullable no schema — sem disciplina específica
         turma_id: selectedTurma,
         valor_maximo: Number(valorMaximo) || 10,
       });
 
-      toast({ title: "Sucesso!", description: "Avaliação cadastrada. Ela já aparecerá no seu Gradebook." });
+      toast({ title: "Sucesso!", description: "Avaliação cadastrada. Ela já aparecerá no Gradebook." });
       setModalOpen(false);
       setTitulo("");
       setDescricao("");
       setDataEntrega("");
+      setValorMaximo("10");
       loadAtividades(selectedTurma);
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Falha ao criar avaliação.';
-      toast({ title: "Erro", description: msg, variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Erro", description: "Falha ao criar avaliação. " + (error instanceof Error ? error.message : ""), variant: "destructive" });
     } finally {
       setSaving(false);
     }

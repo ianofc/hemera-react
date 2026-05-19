@@ -22,15 +22,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up listener BEFORE getSession
+    // 1. Escuta mudanças de sessão em tempo real
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
       setUser(s?.user ?? null);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // 2. Carrega sessão atual (refresh da página)
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      setUser(s?.user ?? null);
+      setLoading(false);
+    }).catch(() => {
       setLoading(false);
     });
 
@@ -43,7 +46,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
   };
 
-  return <Ctx.Provider value={{ user, session, loading, signOut }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ user, session, loading, signOut }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
