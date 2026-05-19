@@ -1,6 +1,5 @@
-import { supabase as _supabase } from '@/integrations/supabase/client';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase: any = _supabase;
+import { supabase } from '@/integrations/supabase/client';
+
 
 export interface GamificacaoStatus {
   nivel: number;

@@ -54,16 +54,12 @@ export default function DiarioClasse() {
       setLoading(true);
       const data = await pedagogicoService.getPlanosDeAula(turmaId);
       setPlanos(data);
-      
       const novosDiarios: Record<string, string> = {};
       data.forEach(p => {
-        // Aproveitamos o campo 'avaliacao' ou 'conteudo' como diário se ele não tiver um campo específico,
-        // Mas o ideal é que seja uma coluna "observacoes_diario". 
-        // Como não alterei a tipagem agressivamente, vamos usar um hack temporário ou campo de status para simular o diário preenchido.
-        novosDiarios[p.id] = p.status === 'Ministrada' ? 'Aula ministrada conforme plano.' : '';
+        novosDiarios[p.id] = p.diario_registro ?? '';
       });
       setDiarios(novosDiarios);
-    } catch (error) {
+    } catch {
       toast({ title: "Aviso", description: "Tabela de planos pode não existir." });
     } finally {
       setLoading(false);
@@ -71,17 +67,14 @@ export default function DiarioClasse() {
   };
 
   const handleSave = async (plano: PlanoDeAula) => {
+    const texto = diarios[plano.id];
+    if (!texto) return;
     setSavingId(plano.id);
     try {
-      await pedagogicoService.atualizarPlano(plano.id, { 
-        status: 'Ministrada',
-        // Idealmente salvaríamos o texto do diário aqui em uma coluna 'diario_registro'
-      });
-      toast({ title: "Sucesso", description: "Registro do diário salvo com sucesso!" });
-      
-      // Atualiza localmente
-      setPlanos(prev => prev.map(p => p.id === plano.id ? { ...p, status: 'Ministrada' } : p));
-    } catch (error) {
+      await pedagogicoService.upsertDiario(plano.id, texto);
+      toast({ title: "Sucesso", description: "Registro salvo no diário!" });
+      setPlanos(prev => prev.map(p => p.id === plano.id ? { ...p, status: 'Ministrada', diario_registro: texto } : p));
+    } catch {
       toast({ title: "Erro", description: "Falha ao salvar diário", variant: "destructive" });
     } finally {
       setSavingId(null);

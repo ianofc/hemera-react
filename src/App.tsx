@@ -31,6 +31,8 @@ import CursoBuilder from "./pages/professor/CursoBuilder";
 import GradebookReal from "./pages/professor/GradebookReal";
 import AlunoDashboard from "./pages/aluno/AlunoDashboard";
 import HemeraLM from "./pages/shared/HemeraLM";
+import Disciplinas from "./pages/professor/Disciplinas";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 
 // Componentes de módulo removidos - Hemera é o sistema único
 
@@ -55,8 +57,8 @@ const App = () => (
               <Route path="turmas/nova" element={<TurmaForm />} />
               <Route path="turmas/:id" element={<TurmaDetalhe />} />
               <Route path="turmas/:id/editar" element={<TurmaForm />} />
-              <Route path="disciplinas" element={<P.ProfDisciplinas />} />
-              <Route path="disciplinas/nova" element={<P.ProfDisciplinaForm />} />
+              <Route path="disciplinas" element={<Disciplinas />} />
+              <Route path="disciplinas/nova" element={<Disciplinas />} />
               <Route path="disciplinas/:id" element={<P.ProfDisciplinaDetalhe />} />
               <Route path="avaliacoes" element={<Avaliacoes />} />
               <Route path="notas/lancamento" element={<P.ProfLancamentoNotas />} />
@@ -118,7 +120,7 @@ const App = () => (
             </Route>
 
             <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<Ad.AdminDashboard />} />
+              <Route index element={<AdminDashboard />} />
               <Route path="usuarios" element={<Ad.AdminUsuarios />} />
               <Route path="usuarios/novo" element={<Ad.AdminUsuarioForm />} />
               <Route path="usuarios/:id" element={<Ad.AdminUsuarioDetalhe />} />

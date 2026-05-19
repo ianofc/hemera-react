@@ -1,6 +1,4 @@
-import { supabase as _supabase } from '@/integrations/supabase/client';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase: any = _supabase;
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Curso {
   id: string;
@@ -157,8 +155,7 @@ export const cursosService = {
             moduloId: a.modulo_id,
             titulo: a.titulo,
             duracaoMinutos: a.duracao_minutos,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            tipo: a.tipo as any,
+            tipo: (a.tipo as AulaCurso['tipo']) ?? 'video',
             ordem: a.ordem,
             exigeEntrega: a.exige_entrega
           }))
