@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { 
   PlayCircle, CheckCircle, Lock, Star, Users, Clock, Loader2, ArrowLeft,
-  ChevronDown, ChevronUp, FileText, HelpCircle, MonitorPlay, MessageSquare, UploadCloud, Trophy
+  ChevronDown, ChevronUp, FileText, HelpCircle, MonitorPlay, MessageSquare, UploadCloud, Trophy, Award
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { gamificacaoService } from "@/services/gamificacaoService";

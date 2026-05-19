@@ -15,8 +15,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@athenes": path.resolve(__dirname, "./athenes-main/athenes-main/frontend/src"),
-      "@ui": path.resolve(__dirname, "./src/components/ui")
+      "@ui": path.resolve(__dirname, "./src/components/ui"),
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },

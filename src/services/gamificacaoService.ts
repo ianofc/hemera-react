@@ -1,9 +1,13 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as _supabase } from '@/integrations/supabase/client';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const supabase: any = _supabase;
 
 export interface GamificacaoStatus {
   nivel: number;
   xpAtual: number;
   xpProximoNivel: number;
+  xpProgressoNoNivel: number;
+  xpTotalDoNivel: number;
   titulo: string;
   conquistas: Conquista[];
 }
@@ -53,7 +57,7 @@ export const gamificacaoService = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         const calc = calcularNivel(mockXP);
-        return { nivel: calc.nivel, xpAtual: calc.xpAtual, xpProximoNivel: calc.xpProximoNivel, titulo: calc.titulo, conquistas: defaultConquistas };
+        return { nivel: calc.nivel, xpAtual: calc.xpAtual, xpProximoNivel: calc.xpProximoNivel, xpProgressoNoNivel: calc.xpProgressoNoNivel, xpTotalDoNivel: calc.xpTotalDoNivel, titulo: calc.titulo, conquistas: defaultConquistas };
       }
 
       // Busca XP no Supabase
@@ -90,6 +94,8 @@ export const gamificacaoService = {
         nivel: calc.nivel,
         xpAtual: calc.xpAtual,
         xpProximoNivel: calc.xpProximoNivel,
+        xpProgressoNoNivel: calc.xpProgressoNoNivel,
+        xpTotalDoNivel: calc.xpTotalDoNivel,
         titulo: calc.titulo,
         conquistas
       };
@@ -99,6 +105,8 @@ export const gamificacaoService = {
         nivel: calc.nivel,
         xpAtual: calc.xpAtual,
         xpProximoNivel: calc.xpProximoNivel,
+        xpProgressoNoNivel: calc.xpProgressoNoNivel,
+        xpTotalDoNivel: calc.xpTotalDoNivel,
         titulo: calc.titulo,
         conquistas: defaultConquistas
       };
