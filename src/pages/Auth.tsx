@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-// Integrado diretamente com o cliente Supabase
 import { useAuth } from "@/hooks/useAuth";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { toast } from "sonner";
@@ -14,7 +13,7 @@ export default function Auth() {
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { user, signInMock } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     document.title = "Hemera | Autenticação";
@@ -30,14 +29,36 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     try {
-      signInMock();
-      toast.success("Login simulado ativado! Entrando como Professor Ian.");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      toast.error(err.message || "Erro de autenticação");
+      if (mode === "signup") {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: { first_name: firstName, last_name: lastName, role: "professor" },
+          },
+        });
+        if (error) throw error;
+        toast.success("Conta criada! Verifique seu e-mail para confirmar.");
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        toast.success("Bem-vindo de volta!");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro de autenticação";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/` },
+    });
+    if (error) toast.error(error.message);
   };
 
   return (
@@ -54,18 +75,12 @@ export default function Auth() {
 
         <div className="p-8 glass-island rounded-3xl">
           <div className="flex p-1 mb-6 bg-slate-100 rounded-xl">
-            <button
-              type="button"
-              onClick={() => setMode("signin")}
-              className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all ${mode === "signin" ? "bg-white text-aurora-secondary shadow-sm" : "text-slate-500"}`}
-            >
+            <button type="button" onClick={() => setMode("signin")}
+              className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all ${mode === "signin" ? "bg-white text-aurora-secondary shadow-sm" : "text-slate-500"}`}>
               Entrar
             </button>
-            <button
-              type="button"
-              onClick={() => setMode("signup")}
-              className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all ${mode === "signup" ? "bg-white text-aurora-secondary shadow-sm" : "text-slate-500"}`}
-            >
+            <button type="button" onClick={() => setMode("signup")}
+              className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all ${mode === "signup" ? "bg-white text-aurora-secondary shadow-sm" : "text-slate-500"}`}>
               Criar Conta
             </button>
           </div>
@@ -73,28 +88,18 @@ export default function Auth() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "signup" && (
               <div className="grid grid-cols-2 gap-3">
-                <input
-                  required value={firstName} onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Nome" className="w-full px-4 py-3 text-sm transition border bg-white/70 border-slate-200 rounded-xl focus:ring-2 focus:ring-aurora-secondary focus:border-transparent outline-none"
-                />
-                <input
-                  value={lastName} onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Sobrenome" className="w-full px-4 py-3 text-sm transition border bg-white/70 border-slate-200 rounded-xl focus:ring-2 focus:ring-aurora-secondary focus:border-transparent outline-none"
-                />
+                <input required value={firstName} onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Nome" className="w-full px-4 py-3 text-sm transition border bg-white/70 border-slate-200 rounded-xl focus:ring-2 focus:ring-aurora-secondary focus:border-transparent outline-none" />
+                <input value={lastName} onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Sobrenome" className="w-full px-4 py-3 text-sm transition border bg-white/70 border-slate-200 rounded-xl focus:ring-2 focus:ring-aurora-secondary focus:border-transparent outline-none" />
               </div>
             )}
-            <input
-              type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com" className="w-full px-4 py-3 text-sm transition border bg-white/70 border-slate-200 rounded-xl focus:ring-2 focus:ring-aurora-secondary focus:border-transparent outline-none"
-            />
-            <input
-              type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder="Senha (mín. 6)" className="w-full px-4 py-3 text-sm transition border bg-white/70 border-slate-200 rounded-xl focus:ring-2 focus:ring-aurora-secondary focus:border-transparent outline-none"
-            />
-            <button
-              type="submit" disabled={loading}
-              className="flex items-center justify-center w-full gap-2 py-3 text-sm font-bold text-white transition shadow-xl rounded-xl bg-gradient-to-r from-aurora-secondary to-aurora-accent hover:-translate-y-0.5 disabled:opacity-50"
-            >
+            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="seu@email.com" className="w-full px-4 py-3 text-sm transition border bg-white/70 border-slate-200 rounded-xl focus:ring-2 focus:ring-aurora-secondary focus:border-transparent outline-none" />
+            <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
+              placeholder="Senha (mín. 6)" className="w-full px-4 py-3 text-sm transition border bg-white/70 border-slate-200 rounded-xl focus:ring-2 focus:ring-aurora-secondary focus:border-transparent outline-none" />
+            <button type="submit" disabled={loading}
+              className="flex items-center justify-center w-full gap-2 py-3 text-sm font-bold text-white transition shadow-xl rounded-xl bg-gradient-to-r from-aurora-secondary to-aurora-accent hover:-translate-y-0.5 disabled:opacity-50">
               {loading ? <i className="fas fa-spinner fa-spin" /> : <i className="fas fa-sign-in-alt" />}
               {mode === "signin" ? "Entrar" : "Criar Conta"}
             </button>
@@ -105,14 +110,8 @@ export default function Auth() {
             <div className="relative flex justify-center text-[10px] uppercase tracking-widest"><span className="px-3 bg-white/80 text-slate-400">ou</span></div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              signInMock();
-              toast.success("Login simulado com Google ativado! Entrando como Professor Ian.");
-            }}
-            className="flex items-center justify-center w-full gap-3 py-3 text-sm font-bold transition border bg-white border-slate-200 rounded-xl text-slate-700 hover:bg-slate-50"
-          >
+          <button type="button" onClick={handleGoogle}
+            className="flex items-center justify-center w-full gap-3 py-3 text-sm font-bold transition border bg-white border-slate-200 rounded-xl text-slate-700 hover:bg-slate-50">
             <i className="fab fa-google text-aurora-accent" /> Continuar com Google
           </button>
         </div>

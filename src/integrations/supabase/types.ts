@@ -58,6 +58,98 @@ export type Database = {
           },
         ]
       }
+      atividades: {
+        Row: {
+          created_at: string
+          data_entrega: string
+          descricao: string | null
+          disciplina_id: string | null
+          id: string
+          professor_id: string
+          titulo: string
+          turma_id: string
+          valor_maximo: number
+        }
+        Insert: {
+          created_at?: string
+          data_entrega: string
+          descricao?: string | null
+          disciplina_id?: string | null
+          id?: string
+          professor_id: string
+          titulo: string
+          turma_id: string
+          valor_maximo?: number
+        }
+        Update: {
+          created_at?: string
+          data_entrega?: string
+          descricao?: string | null
+          disciplina_id?: string | null
+          id?: string
+          professor_id?: string
+          titulo?: string
+          turma_id?: string
+          valor_maximo?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atividades_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividades_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diario_classe: {
+        Row: {
+          conteudo: string | null
+          created_at: string
+          data: string
+          id: string
+          observacoes: string | null
+          professor_id: string
+          turma_id: string
+          updated_at: string
+        }
+        Insert: {
+          conteudo?: string | null
+          created_at?: string
+          data?: string
+          id?: string
+          observacoes?: string | null
+          professor_id: string
+          turma_id: string
+          updated_at?: string
+        }
+        Update: {
+          conteudo?: string | null
+          created_at?: string
+          data?: string
+          id?: string
+          observacoes?: string | null
+          professor_id?: string
+          turma_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diario_classe_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       disciplinas: {
         Row: {
           created_at: string
@@ -83,6 +175,51 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "disciplinas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      frequencias: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          data: string
+          id: string
+          presente: boolean
+          professor_id: string
+          turma_id: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          data?: string
+          id?: string
+          presente?: boolean
+          professor_id: string
+          turma_id: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          data?: string
+          id?: string
+          presente?: boolean
+          professor_id?: string
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "frequencias_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "frequencias_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "turmas"
@@ -124,6 +261,157 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "horarios_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notas: {
+        Row: {
+          aluno_id: string
+          atividade_id: string
+          created_at: string
+          feedback: string | null
+          id: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          aluno_id: string
+          atividade_id: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          aluno_id?: string
+          atividade_id?: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notas_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notas_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planos_aula: {
+        Row: {
+          avaliacao: string | null
+          conteudo: string | null
+          created_at: string
+          data_prevista: string
+          duracao: string | null
+          habilidades_bncc: string | null
+          id: string
+          id_atividade_gerada: string | null
+          metodologia: string | null
+          objetivos: string | null
+          professor_id: string
+          recursos: string | null
+          referencias: string | null
+          status: string
+          titulo: string
+          turma_id: string
+          updated_at: string
+        }
+        Insert: {
+          avaliacao?: string | null
+          conteudo?: string | null
+          created_at?: string
+          data_prevista: string
+          duracao?: string | null
+          habilidades_bncc?: string | null
+          id?: string
+          id_atividade_gerada?: string | null
+          metodologia?: string | null
+          objetivos?: string | null
+          professor_id: string
+          recursos?: string | null
+          referencias?: string | null
+          status?: string
+          titulo: string
+          turma_id: string
+          updated_at?: string
+        }
+        Update: {
+          avaliacao?: string | null
+          conteudo?: string | null
+          created_at?: string
+          data_prevista?: string
+          duracao?: string | null
+          habilidades_bncc?: string | null
+          id?: string
+          id_atividade_gerada?: string | null
+          metodologia?: string | null
+          objetivos?: string | null
+          professor_id?: string
+          recursos?: string | null
+          referencias?: string | null
+          status?: string
+          titulo?: string
+          turma_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planos_aula_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      postagens_mural: {
+        Row: {
+          arquivo_nome: string | null
+          arquivo_url: string | null
+          autor_id: string
+          created_at: string
+          id: string
+          texto: string
+          turma_id: string
+        }
+        Insert: {
+          arquivo_nome?: string | null
+          arquivo_url?: string | null
+          autor_id: string
+          created_at?: string
+          id?: string
+          texto: string
+          turma_id: string
+        }
+        Update: {
+          arquivo_nome?: string | null
+          arquivo_url?: string | null
+          autor_id?: string
+          created_at?: string
+          id?: string
+          texto?: string
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postagens_mural_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "turmas"

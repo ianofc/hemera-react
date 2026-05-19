@@ -1,12 +1,24 @@
 {
   "files": [],
-  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ],
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@athenes/*": ["./athenes-main/athenes-main/frontend/src/*"],
-      "@ui/*": ["./src/components/ui/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@athenes/*": [
+        "./athenes-main/athenes-main/frontend/src/*"
+      ],
+      "@ui/*": [
+        "./src/components/ui/*"
+      ]
     },
     "noImplicitAny": false,
     "noUnusedParameters": false,

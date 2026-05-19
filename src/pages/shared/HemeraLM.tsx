@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowLeft, BrainCircuit, FileText, CheckCircle2, Search, Sparkles, 
-  Headphones, ListTree, PlayCircle, Send, User, MessageSquare
+  Headphones, ListTree, PlayCircle, Send, User, MessageSquare, HelpCircle
 } from "lucide-react";
 
 export default function HemeraLM() {

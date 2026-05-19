@@ -7,15 +7,13 @@ interface AuthCtx {
   session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
-  signInMock: () => void;
 }
 
-const Ctx = createContext<AuthCtx>({ 
-  user: null, 
-  session: null, 
-  loading: true, 
+const Ctx = createContext<AuthCtx>({
+  user: null,
+  session: null,
+  loading: true,
   signOut: async () => {},
-  signInMock: () => {}
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -24,56 +22,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Set up listener BEFORE getSession
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
       setUser(s?.user ?? null);
     });
-    
-    // Tenta carregar sessão real do Supabase
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setSession(session);
-        setUser(session.user);
-      }
-      setLoading(false);
-    }).catch(() => {
+      setSession(session);
+      setUser(session?.user ?? null);
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signOut = async () => { 
-    await supabase.auth.signOut(); 
+  const signOut = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     setSession(null);
   };
 
-  const signInMock = () => {
-    const mockUser: User = {
-      id: "a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e5e5e5",
-      email: "ianworktech@gmail.com",
-      aud: "authenticated",
-      role: "authenticated",
-      user_metadata: {
-        first_name: "Ian",
-        last_name: "Santos",
-        role: "professor"
-      },
-      app_metadata: {},
-      created_at: new Date().toISOString()
-    };
-    setUser(mockUser);
-    setSession({
-      access_token: "mock-token",
-      token_type: "bearer",
-      expires_in: 3600,
-      refresh_token: "mock-refresh",
-      user: mockUser
-    });
-  };
-
-  return <Ctx.Provider value={{ user, session, loading, signOut, signInMock }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ user, session, loading, signOut }}>{children}</Ctx.Provider>;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
