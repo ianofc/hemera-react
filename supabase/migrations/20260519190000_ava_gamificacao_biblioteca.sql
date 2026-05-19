@@ -1,6 +1,6 @@
 -- ============================================================
 -- Migration: AVA (Cursos), Gamificação e Biblioteca
--- 2026-05-19
+-- 2026-05-19 (v2 — sintaxe corrigida: sem IF NOT EXISTS em POLICY)
 -- ============================================================
 
 -- ── 1. CURSOS ─────────────────────────────────────────────────────────────────
@@ -24,10 +24,22 @@ CREATE TABLE IF NOT EXISTS public.cursos (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ALTER TABLE public.cursos ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Cursos publicados visíveis para todos" ON public.cursos
-  FOR SELECT USING (publicado = true OR auth.uid() = criado_por);
-CREATE POLICY IF NOT EXISTS "Professores gerenciam seus cursos" ON public.cursos
-  FOR ALL USING (auth.uid() = criado_por) WITH CHECK (auth.uid() = criado_por);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'cursos' AND policyname = 'Cursos publicados visiveis para todos') THEN
+    CREATE POLICY "Cursos publicados visiveis para todos" ON public.cursos
+      FOR SELECT USING (publicado = true OR auth.uid() = criado_por);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'cursos' AND policyname = 'Professores gerenciam seus cursos') THEN
+    CREATE POLICY "Professores gerenciam seus cursos" ON public.cursos
+      FOR ALL USING (auth.uid() = criado_por) WITH CHECK (auth.uid() = criado_por);
+  END IF;
+END $$;
 
 -- ── 2. MÓDULOS ────────────────────────────────────────────────────────────────
 
@@ -39,14 +51,25 @@ CREATE TABLE IF NOT EXISTS public.modulos (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ALTER TABLE public.modulos ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Modulos visíveis para todos" ON public.modulos
-  FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "Professores gerenciam modulos" ON public.modulos
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.cursos c WHERE c.id = curso_id AND c.criado_por = auth.uid())
-  ) WITH CHECK (
-    EXISTS (SELECT 1 FROM public.cursos c WHERE c.id = curso_id AND c.criado_por = auth.uid())
-  );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'modulos' AND policyname = 'Modulos visiveis para todos') THEN
+    CREATE POLICY "Modulos visiveis para todos" ON public.modulos FOR SELECT USING (true);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'modulos' AND policyname = 'Professores gerenciam modulos') THEN
+    CREATE POLICY "Professores gerenciam modulos" ON public.modulos
+      FOR ALL USING (
+        EXISTS (SELECT 1 FROM public.cursos c WHERE c.id = curso_id AND c.criado_por = auth.uid())
+      ) WITH CHECK (
+        EXISTS (SELECT 1 FROM public.cursos c WHERE c.id = curso_id AND c.criado_por = auth.uid())
+      );
+  END IF;
+END $$;
 
 -- ── 3. AULAS ──────────────────────────────────────────────────────────────────
 
@@ -62,21 +85,33 @@ CREATE TABLE IF NOT EXISTS public.aulas (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ALTER TABLE public.aulas ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Aulas visíveis para todos" ON public.aulas FOR SELECT USING (true);
-CREATE POLICY IF NOT EXISTS "Professores gerenciam aulas" ON public.aulas
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.modulos m
-      JOIN public.cursos c ON c.id = m.curso_id
-      WHERE m.id = modulo_id AND c.criado_por = auth.uid()
-    )
-  ) WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.modulos m
-      JOIN public.cursos c ON c.id = m.curso_id
-      WHERE m.id = modulo_id AND c.criado_por = auth.uid()
-    )
-  );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'aulas' AND policyname = 'Aulas visiveis para todos') THEN
+    CREATE POLICY "Aulas visiveis para todos" ON public.aulas FOR SELECT USING (true);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'aulas' AND policyname = 'Professores gerenciam aulas') THEN
+    CREATE POLICY "Professores gerenciam aulas" ON public.aulas
+      FOR ALL USING (
+        EXISTS (
+          SELECT 1 FROM public.modulos m
+          JOIN public.cursos c ON c.id = m.curso_id
+          WHERE m.id = modulo_id AND c.criado_por = auth.uid()
+        )
+      ) WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM public.modulos m
+          JOIN public.cursos c ON c.id = m.curso_id
+          WHERE m.id = modulo_id AND c.criado_por = auth.uid()
+        )
+      );
+  END IF;
+END $$;
 
 -- ── 4. MATRÍCULAS ─────────────────────────────────────────────────────────────
 
@@ -88,10 +123,22 @@ CREATE TABLE IF NOT EXISTS public.matriculas (
   UNIQUE (curso_id, aluno_id)
 );
 ALTER TABLE public.matriculas ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Alunos veem suas matrículas" ON public.matriculas
-  FOR SELECT USING (auth.uid() = aluno_id);
-CREATE POLICY IF NOT EXISTS "Alunos se matriculam" ON public.matriculas
-  FOR INSERT WITH CHECK (auth.uid() = aluno_id);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'matriculas' AND policyname = 'Alunos veem suas matriculas') THEN
+    CREATE POLICY "Alunos veem suas matriculas" ON public.matriculas
+      FOR SELECT USING (auth.uid() = aluno_id);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'matriculas' AND policyname = 'Alunos se matriculam') THEN
+    CREATE POLICY "Alunos se matriculam" ON public.matriculas
+      FOR INSERT WITH CHECK (auth.uid() = aluno_id);
+  END IF;
+END $$;
 
 -- ── 5. PROGRESSO DO ALUNO ─────────────────────────────────────────────────────
 
@@ -103,14 +150,26 @@ CREATE TABLE IF NOT EXISTS public.progresso_aluno (
   UNIQUE (matricula_id, aula_id)
 );
 ALTER TABLE public.progresso_aluno ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Alunos veem seu progresso" ON public.progresso_aluno
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.matriculas m WHERE m.id = matricula_id AND m.aluno_id = auth.uid())
-  );
-CREATE POLICY IF NOT EXISTS "Alunos registram progresso" ON public.progresso_aluno
-  FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.matriculas m WHERE m.id = matricula_id AND m.aluno_id = auth.uid())
-  );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'progresso_aluno' AND policyname = 'Alunos veem seu progresso') THEN
+    CREATE POLICY "Alunos veem seu progresso" ON public.progresso_aluno
+      FOR SELECT USING (
+        EXISTS (SELECT 1 FROM public.matriculas m WHERE m.id = matricula_id AND m.aluno_id = auth.uid())
+      );
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'progresso_aluno' AND policyname = 'Alunos registram progresso') THEN
+    CREATE POLICY "Alunos registram progresso" ON public.progresso_aluno
+      FOR INSERT WITH CHECK (
+        EXISTS (SELECT 1 FROM public.matriculas m WHERE m.id = matricula_id AND m.aluno_id = auth.uid())
+      );
+  END IF;
+END $$;
 
 -- ── 6. GAMIFICAÇÃO STATUS ─────────────────────────────────────────────────────
 
@@ -122,10 +181,22 @@ CREATE TABLE IF NOT EXISTS public.gamificacao_status (
   ultima_atualizacao TIMESTAMPTZ DEFAULT now()
 );
 ALTER TABLE public.gamificacao_status ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Alunos veem próprio status" ON public.gamificacao_status
-  FOR SELECT USING (auth.uid() = aluno_id);
-CREATE POLICY IF NOT EXISTS "Alunos atualizam próprio status" ON public.gamificacao_status
-  FOR ALL USING (auth.uid() = aluno_id) WITH CHECK (auth.uid() = aluno_id);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'gamificacao_status' AND policyname = 'Alunos veem proprio status') THEN
+    CREATE POLICY "Alunos veem proprio status" ON public.gamificacao_status
+      FOR SELECT USING (auth.uid() = aluno_id);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'gamificacao_status' AND policyname = 'Alunos atualizam proprio status') THEN
+    CREATE POLICY "Alunos atualizam proprio status" ON public.gamificacao_status
+      FOR ALL USING (auth.uid() = aluno_id) WITH CHECK (auth.uid() = aluno_id);
+  END IF;
+END $$;
 
 -- ── 7. GAMIFICAÇÃO CONQUISTAS ────────────────────────────────────────────────
 
@@ -137,10 +208,22 @@ CREATE TABLE IF NOT EXISTS public.gamificacao_conquistas (
   UNIQUE (aluno_id, badge_id)
 );
 ALTER TABLE public.gamificacao_conquistas ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Alunos veem suas conquistas" ON public.gamificacao_conquistas
-  FOR SELECT USING (auth.uid() = aluno_id);
-CREATE POLICY IF NOT EXISTS "Inserir conquistas" ON public.gamificacao_conquistas
-  FOR INSERT WITH CHECK (auth.uid() = aluno_id);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'gamificacao_conquistas' AND policyname = 'Alunos veem suas conquistas') THEN
+    CREATE POLICY "Alunos veem suas conquistas" ON public.gamificacao_conquistas
+      FOR SELECT USING (auth.uid() = aluno_id);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'gamificacao_conquistas' AND policyname = 'Inserir conquistas') THEN
+    CREATE POLICY "Inserir conquistas" ON public.gamificacao_conquistas
+      FOR INSERT WITH CHECK (auth.uid() = aluno_id);
+  END IF;
+END $$;
 
 -- ── 8. BIBLIOTECA ─────────────────────────────────────────────────────────────
 
@@ -158,10 +241,22 @@ CREATE TABLE IF NOT EXISTS public.materiais_biblioteca (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ALTER TABLE public.materiais_biblioteca ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Materiais públicos visíveis" ON public.materiais_biblioteca
-  FOR SELECT USING (is_publico = true OR auth.uid() = criado_por);
-CREATE POLICY IF NOT EXISTS "Professores gerenciam materiais" ON public.materiais_biblioteca
-  FOR ALL USING (auth.uid() = criado_por) WITH CHECK (auth.uid() = criado_por);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'materiais_biblioteca' AND policyname = 'Materiais publicos visiveis') THEN
+    CREATE POLICY "Materiais publicos visiveis" ON public.materiais_biblioteca
+      FOR SELECT USING (is_publico = true OR auth.uid() = criado_por);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'materiais_biblioteca' AND policyname = 'Professores gerenciam materiais') THEN
+    CREATE POLICY "Professores gerenciam materiais" ON public.materiais_biblioteca
+      FOR ALL USING (auth.uid() = criado_por) WITH CHECK (auth.uid() = criado_por);
+  END IF;
+END $$;
 
 -- ── 9. ÍNDICES ────────────────────────────────────────────────────────────────
 
