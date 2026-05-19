@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Reports and temporary files
+eslint_report.json
+eslint_report.txt

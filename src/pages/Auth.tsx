@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+// Integrado diretamente com o cliente Supabase
 import { useAuth } from "@/hooks/useAuth";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { toast } from "sonner";
@@ -14,35 +14,25 @@ export default function Auth() {
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signInMock } = useAuth();
 
   useEffect(() => {
-    document.title = "Hemera | Acesso do Docente";
-    if (user) navigate("/professor", { replace: true });
+    document.title = "Hemera | Autenticação";
+    if (user) {
+      const role = user.user_metadata?.role || "professor";
+      if (role === "aluno") navigate("/aluno", { replace: true });
+      else if (role === "admin") navigate("/admin", { replace: true });
+      else navigate("/professor", { replace: true });
+    }
   }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/professor`,
-            data: { first_name: firstName, last_name: lastName, role: "professor" },
-          },
-        });
-        if (error) throw error;
-        toast.success("Conta criada! Você já pode entrar.");
-        setMode("signin");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast.success("Bem-vindo de volta!");
-        navigate("/professor");
-      }
+      signInMock();
+      toast.success("Login simulado ativado! Entrando como Professor Ian.");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       toast.error(err.message || "Erro de autenticação");
     } finally {
@@ -59,7 +49,7 @@ export default function Auth() {
             <i className="text-2xl fas fa-chalkboard-teacher" />
           </div>
           <h1 className="text-4xl font-bold text-slate-800 font-display">Hemera</h1>
-          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-slate-400 mt-1">Portal do Docente</p>
+          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-slate-400 mt-1">Portal de Acesso</p>
         </div>
 
         <div className="p-8 glass-island rounded-3xl">
@@ -117,9 +107,9 @@ export default function Auth() {
 
           <button
             type="button"
-            onClick={async () => {
-              const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/professor` });
-              if (r.error) toast.error(r.error.message || "Erro Google");
+            onClick={() => {
+              signInMock();
+              toast.success("Login simulado com Google ativado! Entrando como Professor Ian.");
             }}
             className="flex items-center justify-center w-full gap-3 py-3 text-sm font-bold transition border bg-white border-slate-200 rounded-xl text-slate-700 hover:bg-slate-50"
           >

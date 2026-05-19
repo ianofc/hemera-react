@@ -21,22 +21,22 @@ export interface GenerateArtifactResponse {
 
 export const aiService = {
   /**
-   * Generates an artifact using the FastAPI backend and Gemini.
+   * Generates an artifact using the Supabase Edge Function (GAIA).
    */
   async generateArtifact(data: GenerateArtifactRequest): Promise<GenerateArtifactResponse> {
     try {
-      // We send the request to our FastAPI server
-      const response = await axios.post(`${API_BASE_URL}/api/intelligence/generate`, {
-        prompt: data.prompt,
-        tool_type: data.toolId,
-        context_id: data.contextId,
+      const { data: responseData, error } = await supabase.functions.invoke('generate-activity', {
+        body: {
+          prompt: data.prompt,
+          toolId: data.toolId,
+          contextId: data.contextId,
+        }
       });
 
-      // Assuming the FastAPI backend returns the created artifact object
-      // which has already been saved to Supabase 'artefatos_ia' table
-      return response.data;
+      if (error) throw error;
+      return responseData;
     } catch (error) {
-      console.error('Error generating artifact via FastAPI:', error);
+      console.error('Error generating artifact via Edge Function:', error);
       throw error;
     }
   },

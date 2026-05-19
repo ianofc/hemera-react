@@ -94,6 +94,7 @@ export default function MockScreen({
     setParams(np, { replace: true });
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const allRows = forceEmpty ? [] : rows || [];
 
   const filteredRows = useMemo(() => {

@@ -1,6 +1,8 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { gamificacaoService, GamificacaoStatus } from "@/services/gamificacaoService";
+import { Trophy } from "lucide-react";
 
 const links = [
   { to: "/aluno", icon: "fas fa-home", label: "Início", end: true },
@@ -14,9 +16,16 @@ const links = [
 export const AlunoNavbar = () => {
   const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+  const [gamificacao, setGamificacao] = useState<GamificacaoStatus | null>(null);
   const navigate = useNavigate();
   const firstName = (user?.user_metadata?.first_name as string) || user?.email?.split("@")[0] || "Aluno";
   const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=6366f1&color=fff`;
+
+  useEffect(() => {
+    gamificacaoService.getStatusAluno().then(setGamificacao);
+  }, []);
+
+  const xpPercent = gamificacao ? (gamificacao.xpProgressoNoNivel / gamificacao.xpTotalDoNivel) * 100 : 0;
 
   return (
     <nav className="sticky top-0 z-50 w-full px-4 py-2 mb-6 transition-all duration-300 shadow-sm glass-nav">
@@ -40,7 +49,22 @@ export const AlunoNavbar = () => {
           ))}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
+          
+          {/* Gamification Bar */}
+          {gamificacao && (
+            <div className="hidden lg:flex flex-col items-end mr-2">
+              <div className="flex items-center gap-2 mb-1">
+                <Trophy className="w-4 h-4 text-amber-500" />
+                <span className="text-xs font-bold text-slate-700">Lvl {gamificacao.nivel}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{gamificacao.titulo}</span>
+              </div>
+              <div className="w-32 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full" style={{ width: `${xpPercent}%` }}></div>
+              </div>
+            </div>
+          )}
+
           <div className="relative">
             <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-3">
               <div className="hidden text-right lg:block">

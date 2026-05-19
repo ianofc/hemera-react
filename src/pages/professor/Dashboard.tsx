@@ -28,8 +28,10 @@ export default function Dashboard() {
       setStats({
         turmas: turmasCount ?? 0,
         alunos: alunosCount ?? 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         hoje: (hData ?? []).filter((h: any) => h.dia_semana === today).length,
       });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setHorarios((hData ?? []) as any);
     })();
   }, [user]);

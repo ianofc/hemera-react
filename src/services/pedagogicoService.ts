@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { PlanoDeAula } from '@/types';
 
 export interface Turma {
   id: string;
@@ -63,6 +64,14 @@ export const pedagogicoService = {
     return data || [];
   },
 
+  // --- FREQUÊNCIA ---
+  async registrarFrequencia(turmaId: string, dataAula: string, presencas: Record<string, boolean>) {
+    // Exemplo de payload: { 'aluno_id_1': true, 'aluno_id_2': false }
+    // Numa implementação real no Supabase, faríamos um upsert na tabela 'frequencia'
+    console.log(`Frequência registrada para turma ${turmaId} em ${dataAula}`, presencas);
+    return true; // Simulado
+  },
+
   // --- ATIVIDADES ---
   async getAtividadesTurma(turmaId: string): Promise<Atividade[]> {
     const { data, error } = await supabase
@@ -71,8 +80,22 @@ export const pedagogicoService = {
       .eq('turma_id', turmaId)
       .order('data_entrega');
 
-    if (error) throw error;
+    if (error) {
+      console.warn("Tabela atividades pode não existir ainda.", error);
+      return [];
+    }
     return data || [];
+  },
+
+  async criarAtividade(atividade: Omit<Atividade, 'id'>): Promise<Atividade> {
+    const { data, error } = await supabase
+      .from('atividades')
+      .insert([atividade])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   },
 
   // --- NOTAS ---
@@ -146,5 +169,68 @@ export const pedagogicoService = {
       atividades,
       tabelaNotas
     };
+  },
+
+  // --- PLANOS DE AULA E PLANEJAMENTO ---
+  async getPlanosDeAula(turmaId: string): Promise<PlanoDeAula[]> {
+    const { data, error } = await supabase
+      .from('planos_aula')
+      .select('*')
+      .eq('turma_id', turmaId)
+      .order('data_prevista', { ascending: false });
+
+    if (error) {
+      console.warn("Tabela planos_aula pode não existir ainda no Supabase. Retornando vazio.");
+      return [];
+    }
+    return data || [];
+  },
+
+  async criarPlanoDeAula(plano: Omit<PlanoDeAula, 'id' | 'created_at'>): Promise<PlanoDeAula> {
+    const { data, error } = await supabase
+      .from('planos_aula')
+      .insert([plano])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async atualizarPlano(id: string, updates: Partial<PlanoDeAula>): Promise<PlanoDeAula> {
+    const { data, error } = await supabase
+      .from('planos_aula')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // --- INTELIGÊNCIA ARTIFICIAL (Migrado do Cortex/Flask) ---
+  async gerarPlanoIA(tema: string, turmaNome: string): Promise<Partial<PlanoDeAula>> {
+    // Chamando Edge Function para proteger a API Key do Gemini
+    const { data, error } = await supabase.functions.invoke('gerar-plano-ia', {
+      body: { tema, turmaNome }
+    });
+
+    if (error) {
+      console.error("Erro na Edge Function gerar-plano-ia:", error);
+      throw new Error("Falha ao gerar plano com IA. A Edge Function precisa estar implantada no Supabase.");
+    }
+
+    return data.plano; // O backend retornará as chaves: titulo, conteudo, objetivos, etc.
+  },
+
+  async gerarProvaIA(turmaId: string, instrucoes: string): Promise<string> {
+    // O backend fará o "Mega-Prompt", agregando resumos dos planos e desempenho da turma
+    const { data, error } = await supabase.functions.invoke('gerar-prova-ia', {
+      body: { turmaId, instrucoes }
+    });
+
+    if (error) throw error;
+    return data.prova_markdown; // O backend retornará o conteúdo em markdown
   }
 };

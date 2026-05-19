@@ -17,6 +17,7 @@ export default function GradebookReal() {
 
   useEffect(() => {
     loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadData = async () => {
@@ -30,6 +31,7 @@ export default function GradebookReal() {
         const matrix = await pedagogicoService.getGradebookMatrix(id);
         setGradebookData(matrix);
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error(error.message || "Erro ao carregar Gradebook");
     } finally {

@@ -9,7 +9,7 @@ export default function Placeholder({ title, icon }: { title: string; icon: stri
           <i className={`text-3xl fas ${icon}`} />
         </div>
         <h1 className="mb-2 text-3xl font-bold text-slate-800 font-display">{title}</h1>
-        <p className="max-w-md text-slate-500">Em breve. Esta seção será replicada do Lumenios original mantendo todas as funcionalidades.</p>
+        <p className="max-w-md text-slate-500">Em breve. Esta seção será implementada nativamente no Hemera.</p>
       </div>
     </div>
   );

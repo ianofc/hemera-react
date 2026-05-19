@@ -44,7 +44,7 @@ export const coreService = {
     return data;
   },
 
-  // --- PROFILES (Usuários Cortex) ---
+  // --- PROFILES (Usuários) ---
   async getMeuPerfil(): Promise<Profile | null> {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) throw new Error("Usuário não autenticado");
