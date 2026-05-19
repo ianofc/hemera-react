@@ -120,18 +120,18 @@ export const pedagogicoService = {
 
   /**
    * Registra frequência de uma turma para uma data.
-   * Faz upsert real na tabela `frequencias` por (aluno_id, data).
-   * disciplina_id é opcional (nullable no schema).
+   * Schema real: UNIQUE(aluno_id, turma_id, data) — sem disciplina_id
    */
   async registrarFrequencia(
     turmaId: string,
     dataAula: string,
     presencas: Record<string, boolean>,
-    disciplinaId?: string,
   ): Promise<void> {
+    const professorId = await getProfessorId();
     const registros = Object.entries(presencas).map(([alunoId, presente]) => ({
       aluno_id: alunoId,
-      disciplina_id: disciplinaId ?? null,
+      turma_id: turmaId,
+      professor_id: professorId,
       data: dataAula,
       presente,
     }));
@@ -140,27 +140,17 @@ export const pedagogicoService = {
 
     const { error } = await supabase
       .from('frequencias')
-      .upsert(registros, { onConflict: 'aluno_id, disciplina_id, data', ignoreDuplicates: false });
+      .upsert(registros, { onConflict: 'aluno_id, turma_id, data', ignoreDuplicates: false });
 
-    if (error) {
-      // Se falhar por constraint (disciplina_id null não suportado no unique), tenta sem disciplina_id
-      const registrosSemDisc = Object.entries(presencas).map(([alunoId, presente]) => ({
-        aluno_id: alunoId,
-        data: dataAula,
-        presente,
-      }));
-      const { error: error2 } = await supabase
-        .from('frequencias')
-        .upsert(registrosSemDisc, { onConflict: 'aluno_id, data', ignoreDuplicates: false });
-      if (error2) throw error2;
-    }
+    if (error) throw error;
 
     // Atualiza taxa_frequencia nos alunos
     for (const alunoId of Object.keys(presencas)) {
       const { data: freqs } = await supabase
         .from('frequencias')
         .select('presente')
-        .eq('aluno_id', alunoId);
+        .eq('aluno_id', alunoId)
+        .eq('turma_id', turmaId);
       if (freqs && freqs.length > 0) {
         const presentes = freqs.filter(f => f.presente).length;
         const taxa = Math.round((presentes / freqs.length) * 100);
@@ -170,8 +160,6 @@ export const pedagogicoService = {
           .eq('id', alunoId);
       }
     }
-
-    void turmaId; // usado externamente para contexto
   },
 
   // ── ATIVIDADES ──────────────────────────────────────────────────────────────
@@ -294,12 +282,12 @@ export const pedagogicoService = {
     texto: string,
     arquivoNome?: string,
   ): Promise<PostagemMural> {
-    const professorId = await getProfessorId();
+    const autorId = await getProfessorId();
     const { data, error } = await supabase
       .from('postagens_mural')
       .insert([{
         turma_id: turmaId,
-        professor_id: professorId,
+        autor_id: autorId,           // schema real usa autor_id
         texto,
         arquivo_nome: arquivoNome ?? null,
       }])
