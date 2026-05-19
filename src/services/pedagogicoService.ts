@@ -50,7 +50,7 @@ export interface Nota {
 export interface PostagemMural {
   id: string;
   turma_id: string;
-  professor_id: string;
+  autor_id: string;        // schema real usa autor_id
   texto: string;
   arquivo_nome: string | null;
   created_at: string;
@@ -310,13 +310,15 @@ export const pedagogicoService = {
   // ── PLANOS DE AULA ──────────────────────────────────────────────────────────
 
   async getPlanosDeAula(turmaId: string): Promise<PlanoDeAula[]> {
+    // Após migration: planos_aula tem turma_id e data_prevista
+    // Antes: filtrar por disciplinas da turma, ordenar por 'data'
     const { data, error } = await supabase
       .from('planos_aula')
       .select('*')
       .eq('turma_id', turmaId)
-      .order('data_prevista', { ascending: false });
+      .order('data', { ascending: false });
     if (error) {
-      console.warn('Tabela planos_aula pode não existir.', error);
+      console.warn('Tabela planos_aula pode não existir ou turma_id ainda não foi adicionado.', error);
       return [];
     }
     return data || [];
