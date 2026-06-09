@@ -22,16 +22,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const savedMockUser = localStorage.getItem("hemera_mock_user");
+    if (savedMockUser) {
+      try {
+        const parsedUser = JSON.parse(savedMockUser);
+        setUser(parsedUser);
+        setSession({
+          user: parsedUser,
+          access_token: "mock-token",
+          refresh_token: "mock-token",
+          expires_in: 3600,
+          token_type: "bearer"
+        } as unknown as Session);
+        setLoading(false);
+        return;
+      } catch (e) {
+        localStorage.removeItem("hemera_mock_user");
+      }
+    }
+
     // 1. Escuta mudanças de sessão em tempo real
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
+      if (_e === 'SIGNED_OUT') {
+        localStorage.removeItem("hemera_mock_user");
+        setSession(null);
+        setUser(null);
+        return;
+      }
+      if (!localStorage.getItem("hemera_mock_user")) {
+        setSession(s);
+        setUser(s?.user ?? null);
+      }
     });
 
     // 2. Carrega sessão atual (refresh da página)
     supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      setUser(s?.user ?? null);
+      if (!localStorage.getItem("hemera_mock_user")) {
+        setSession(s);
+        setUser(s?.user ?? null);
+      }
       setLoading(false);
     }).catch(() => {
       setLoading(false);
@@ -41,7 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    localStorage.removeItem("hemera_mock_user");
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      // Ignore signOut errors on mock environment
+    }
     setUser(null);
     setSession(null);
   };

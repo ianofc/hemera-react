@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { pedagogicoService, Turma, Disciplina } from "@/services/pedagogicoService";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Plus, Trash2, Loader2, Search, GraduationCap } from "lucide-react";
+import { BookOpen, Plus, Trash2, Loader2, Search, GraduationCap, Edit, Save } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -28,6 +27,12 @@ export default function Disciplinas() {
   // Form
   const [nomeDisciplina, setNomeDisciplina] = useState("");
   const [turmaNova, setTurmaNova] = useState("");
+
+  // Edit Mode states
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingDisciplina, setEditingDisciplina] = useState<Disciplina | null>(null);
+  const [editNomeDisciplina, setEditNomeDisciplina] = useState("");
+  const [updating, setUpdating] = useState(false);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -78,24 +83,40 @@ export default function Disciplinas() {
     }
     setSaving(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error("Usuário não autenticado");
-
-      const { error } = await supabase.from("disciplinas").insert([{
-        nome: nomeDisciplina.trim(),
-        turma_id: turmaNova,
-        professor_id: userData.user.id,
-      }]);
-      if (error) throw error;
-
+      await pedagogicoService.criarDisciplina(nomeDisciplina.trim(), turmaNova, 60);
       toast({ title: "Sucesso!", description: `Disciplina "${nomeDisciplina}" criada.` });
       setModalOpen(false);
       setNomeDisciplina("");
       if (turmaNova === selectedTurma) loadDisciplinas(selectedTurma);
     } catch (err) {
-      toast({ title: "Erro", description: err instanceof Error ? err.message : "Falha ao criar.", variant: "destructive" });
+      const error = err as Error;
+      toast({ title: "Erro", description: error.message || "Falha ao criar.", variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleOpenEditModal = (d: Disciplina) => {
+    setEditingDisciplina(d);
+    setEditNomeDisciplina(d.nome);
+    setEditModalOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingDisciplina || !editNomeDisciplina.trim()) return;
+    setUpdating(true);
+    try {
+      await pedagogicoService.editarDisciplina(editingDisciplina.id, {
+        nome: editNomeDisciplina.trim()
+      });
+      toast({ title: "Sucesso!", description: `Disciplina atualizada.` });
+      setEditModalOpen(false);
+      loadDisciplinas(selectedTurma);
+    } catch (err) {
+      const error = err as Error;
+      toast({ title: "Erro", description: error.message || "Falha ao editar.", variant: "destructive" });
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -103,8 +124,7 @@ export default function Disciplinas() {
     if (!confirm(`Excluir "${nome}"? Esta ação não pode ser desfeita.`)) return;
     setDeletingId(id);
     try {
-      const { error } = await supabase.from("disciplinas").delete().eq("id", id);
-      if (error) throw error;
+      await pedagogicoService.deletarDisciplina(id);
       setDisciplinas(prev => prev.filter(d => d.id !== id));
       toast({ title: "Excluído", description: `"${nome}" removida.` });
     } catch {
@@ -259,23 +279,61 @@ export default function Disciplinas() {
                       </p>
                     </div>
                   </div>
-                  <button
-                    id={`btn-deletar-${d.id}`}
-                    onClick={e => { e.stopPropagation(); handleDelete(d.id, d.nome); }}
-                    disabled={deletingId === d.id}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
-                  >
-                    {deletingId === d.id
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <Trash2 className="w-4 h-4" />
-                    }
-                  </button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    <button
+                      id={`btn-editar-${d.id}`}
+                      onClick={e => { e.stopPropagation(); handleOpenEditModal(d); }}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
+                      title="Editar Disciplina"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      id={`btn-deletar-${d.id}`}
+                      onClick={e => { e.stopPropagation(); handleDelete(d.id, d.nome); }}
+                      disabled={deletingId === d.id}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50"
+                      title="Excluir Disciplina"
+                    >
+                      {deletingId === d.id
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Trash2 className="w-4 h-4" />
+                      }
+                    </button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Edit Subject Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Disciplina</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4 text-left">
+            <div className="space-y-2">
+              <Label>Nome da Disciplina</Label>
+              <Input
+                value={editNomeDisciplina}
+                onChange={e => setEditNomeDisciplina(e.target.value)}
+                placeholder="Ex: Física, Química..."
+              />
+            </div>
+          </div>
+          <Button
+            onClick={handleUpdate}
+            disabled={updating}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 font-bold"
+          >
+            {updating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            Salvar Alterações
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

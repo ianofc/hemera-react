@@ -22,6 +22,7 @@ export function ArtifactViewer({ artifact }: ArtifactViewerProps) {
   const renderContent = () => {
     switch (artifact.tipo) {
       case 'image':
+      case 'imagem':
         return (
           <div className="relative group rounded-xl overflow-hidden bg-black/50 aspect-video flex items-center justify-center">
             {/* Se for uma URL assinada do storage: */}
@@ -38,7 +39,9 @@ export function ArtifactViewer({ artifact }: ArtifactViewerProps) {
           </div>
         );
       case 'mapa_mental':
+      case 'mapa':
       case 'plano_aula':
+      case 'documento':
         return (
           <div className="p-6 bg-slate-900/50 rounded-xl border border-white/5 text-sm text-slate-300 overflow-auto max-h-[500px] prose prose-invert prose-slate max-w-none">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -57,16 +60,19 @@ export function ArtifactViewer({ artifact }: ArtifactViewerProps) {
           </div>
         );
       default:
-        return <p className="text-slate-400">Tipo de artefato desconhecido.</p>;
+        return <p className="text-slate-400">Tipo de artefato desconhecido: {artifact.tipo}</p>;
     }
   };
 
   const getIcon = () => {
     switch(artifact.tipo) {
-      case 'image': return <ImageIcon className="h-5 w-5 text-pink-400" />;
-      case 'mapa_mental': return <MapIcon className="h-5 w-5 text-cyan-400" />;
+      case 'image':
+      case 'imagem': return <ImageIcon className="h-5 w-5 text-pink-400" />;
+      case 'mapa_mental':
+      case 'mapa': return <MapIcon className="h-5 w-5 text-cyan-400" />;
       case 'video': return <Video className="h-5 w-5 text-purple-400" />;
-      case 'plano_aula': return <FileText className="h-5 w-5 text-emerald-400" />;
+      case 'plano_aula':
+      case 'documento': return <FileText className="h-5 w-5 text-emerald-400" />;
       default: return null;
     }
   };

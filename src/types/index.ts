@@ -69,4 +69,5 @@ export interface PlanoDeAula {
   diario_registro?: string;
   id_atividade_gerada?: string;
   created_at?: string;
+  updated_at?: string;
 }

@@ -5,9 +5,12 @@ import { useAuth } from "@/hooks/useAuth";
 const links = [
   { to: "/professor", icon: "fas fa-layer-group", label: "Painel", end: true },
   { to: "/professor/turmas", icon: "fas fa-users", label: "Turmas" },
-  { to: "/professor/avaliacoes", icon: "fas fa-clipboard-check", label: "Avaliações" },
+  { to: "/professor/planejamento", icon: "fas fa-compass", label: "Planejamento" },
   { to: "/professor/cursos", icon: "fas fa-graduation-cap", label: "Cursos" },
   { to: "/professor/biblioteca", icon: "fas fa-book-bookmark", label: "Biblioteca" },
+  { to: "/professor/thorth", icon: "fas fa-comments", label: "Thorth" },
+  { to: "/professor/polis", icon: "fas fa-bullhorn", label: "Polis" },
+  { to: "/hemera-lm", icon: "fas fa-brain", label: "HemeraLM" },
 ];
 
 export const ProfessorNavbar = () => {

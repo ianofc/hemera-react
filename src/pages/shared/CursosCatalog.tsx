@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { cursosService, Curso } from "@/services/cursosService";
-import { Search, GraduationCap, PlayCircle, Star, Users, User, Clock, Award, Loader2 } from "lucide-react";
+import { Search, GraduationCap, PlayCircle, Star, Users, User, Clock, Award, Loader2, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface CursosCatalogProps {
@@ -160,9 +160,37 @@ export default function CursosCatalog({ basePath = "/aluno/cursos", accent = "pr
                 </div>
 
                 {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <div className="absolute inset-0 bg-slate-900/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <PlayCircle className="w-12 h-12 text-white drop-shadow-md" />
                 </div>
+
+                {accent === "secondary" && (
+                  <div className="absolute bottom-3 right-3 z-30 flex gap-2">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/professor/cursos/${curso.id}/editar`);
+                      }}
+                      className="p-2 bg-white/95 backdrop-blur hover:bg-indigo-650 hover:text-white text-slate-800 rounded-xl transition shadow-md"
+                      title="Editar Curso"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (confirm("Tem certeza que deseja excluir este curso?")) {
+                          await cursosService.deletarCurso(curso.id);
+                          loadCatalog();
+                        }
+                      }}
+                      className="p-2 bg-white/95 backdrop-blur hover:bg-rose-650 hover:text-white text-rose-600 rounded-xl transition shadow-md"
+                      title="Excluir Curso"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="p-5 flex flex-col flex-1">

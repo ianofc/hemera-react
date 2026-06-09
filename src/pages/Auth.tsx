@@ -84,6 +84,21 @@ export default function Auth() {
     }
   };
 
+  const handleDemoLogin = (role: "professor" | "aluno" | "admin") => {
+    setLoading(true);
+    const mockUser = {
+      id: `mock-${role}-id`,
+      email: `${role}@hemera.io`,
+      user_metadata: {
+        role,
+        first_name: role === "professor" ? "Ian" : role === "aluno" ? "Carlos" : "Admin",
+        last_name: role === "professor" ? "Santos" : role === "aluno" ? "Silva" : "Geral",
+      },
+    };
+    localStorage.setItem("hemera_mock_user", JSON.stringify(mockUser));
+    window.location.reload();
+  };
+
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen p-6 overflow-hidden">
       <AuroraBackground />
@@ -155,7 +170,6 @@ export default function Auth() {
               id="input-password"
               type="password"
               required
-              minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Senha (mín. 6 caracteres)"
@@ -199,6 +213,42 @@ export default function Auth() {
             )}
             Continuar com Google
           </button>
+
+          <div className="relative my-5">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200" />
+            </div>
+            <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
+              <span className="px-3 bg-white/80 text-slate-400">Acesso de Demonstração</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => handleDemoLogin("professor")}
+              className="py-2.5 px-1 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors flex flex-col items-center gap-1"
+            >
+              <i className="fas fa-chalkboard-teacher text-indigo-500 text-sm" />
+              <span>Docente</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDemoLogin("aluno")}
+              className="py-2.5 px-1 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors flex flex-col items-center gap-1"
+            >
+              <i className="fas fa-user-graduate text-emerald-500 text-sm" />
+              <span>Aluno</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDemoLogin("admin")}
+              className="py-2.5 px-1 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors flex flex-col items-center gap-1"
+            >
+              <i className="fas fa-user-shield text-amber-500 text-sm" />
+              <span>Gestor</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

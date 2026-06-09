@@ -32,10 +32,10 @@ export function GaiaLayout() {
       }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      console.error("Erro ao carregar GAIA:", error);
+      console.error("Erro ao carregar Thorth:", error);
       toast({
         title: "Erro de Conexão",
-        description: "Não foi possível conectar à rede GAIA.",
+        description: "Não foi possível conectar à rede Thorth.",
         variant: "destructive"
       });
     } finally {
@@ -79,7 +79,7 @@ export function GaiaLayout() {
             <div className="bg-indigo-500/20 p-2 rounded-lg">
               <MessagesSquare className="text-indigo-400 h-5 w-5" />
             </div>
-            <h2 className="font-bold text-lg font-display tracking-wide">GAIA</h2>
+            <h2 className="font-bold text-lg font-display tracking-wide">Thorth</h2>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -136,7 +136,7 @@ export function GaiaLayout() {
               <MessagesSquare className="h-10 w-10 text-slate-700" />
             </div>
             <p className="text-lg font-medium text-slate-400">Selecione um chat para começar</p>
-            <p className="text-sm">Rede GAIA conectada.</p>
+            <p className="text-sm">Rede Thorth conectada.</p>
           </div>
         )}
       </div>

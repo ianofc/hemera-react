@@ -3,7 +3,8 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/hooks/useAuth";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -22,8 +23,6 @@ import * as S from "./pages/shared/SharedPages";
 import Planejamento from "./pages/professor/Planejamento";
 import Frequencia from "./pages/professor/Frequencia";
 import DiarioClasse from "./pages/professor/DiarioClasse";
-import Avaliacoes from "./pages/professor/Avaliacoes";
-import GeradorProvas from "./pages/professor/GeradorProvas";
 import Biblioteca from "./pages/shared/Biblioteca";
 import CursosCatalog from "./pages/shared/CursosCatalog";
 import CursoDetalhe from "./pages/shared/CursoDetalhe";
@@ -33,8 +32,18 @@ import AlunoDashboard from "./pages/aluno/AlunoDashboard";
 import HemeraLM from "./pages/shared/HemeraLM";
 import Disciplinas from "./pages/professor/Disciplinas";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import OlimpoDashboard from "./pages/admin/OlimpoDashboard";
+import AdminIntegracoes from "./pages/admin/AdminIntegracoes";
+import Polis from "./pages/shared/Polis";
+import Thorth from "./pages/shared/Thorth";
+import PentaIADashboard from "./pages/admin/PentaIADashboard";
 
-// Componentes de módulo removidos - Hemera é o sistema único
+const RoleBasedRedirect = ({ to }: { to: "cursos" | "biblioteca" }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-500">Carregando...</div>;
+  const role = user?.user_metadata?.role || "professor";
+  return <Navigate to={`/${role}/${to}`} replace />;
+};
 
 const queryClient = new QueryClient();
 
@@ -48,6 +57,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/cursos" element={<RoleBasedRedirect to="cursos" />} />
+            <Route path="/biblioteca" element={<RoleBasedRedirect to="biblioteca" />} />
             
             {/* Hub Hemera unificado - navegação direta para perfis */}
             <Route path="/professor" element={<ProfessorLayout />}>
@@ -60,7 +71,7 @@ const App = () => (
               <Route path="disciplinas" element={<Disciplinas />} />
               <Route path="disciplinas/nova" element={<Disciplinas />} />
               <Route path="disciplinas/:id" element={<P.ProfDisciplinaDetalhe />} />
-              <Route path="avaliacoes" element={<Avaliacoes />} />
+              <Route path="avaliacoes" element={<Planejamento />} />
               <Route path="notas/lancamento" element={<P.ProfLancamentoNotas />} />
               <Route path="notas/revisao" element={<P.ProfRevisaoNotas />} />
               <Route path="gradebook" element={<GradebookReal />} />
@@ -74,17 +85,25 @@ const App = () => (
               <Route path="planejamento/aula" element={<P.ProfPlanoAula />} />
               <Route path="planejamento/ensino" element={<P.ProfPlanoEnsino />} />
               <Route path="ia/atividades" element={<P.ProfGeradorIA />} />
-              <Route path="ia/prova" element={<GeradorProvas />} />
+              <Route path="ia/prova" element={<Planejamento />} />
               <Route path="ia/rubrica" element={<P.ProfGeradorRubrica />} />
               <Route path="ia/historico" element={<P.ProfHistoricoIA />} />
               <Route path="mural" element={<P.ProfMural />} />
-              <Route path="mensagens" element={<P.ProfMensagens />} />
+              <Route path="thorth" element={<Thorth />} />
+              <Route path="polis" element={<Polis />} />
               <Route path="comunicados" element={<P.ProfComunicados />} />
               <Route path="relatorios" element={<P.ProfRelatorios />} />
               <Route path="relatorios/turma/:id" element={<P.ProfRelatorioTurma />} />
               <Route path="relatorios/aluno/:id" element={<P.ProfRelatorioAluno />} />
               <Route path="perfil" element={<P.ProfPerfil />} />
               <Route path="configuracoes" element={<P.ProfConfiguracoes />} />
+              
+              {/* Cursos e Biblioteca no Layout do Professor */}
+              <Route path="biblioteca" element={<Biblioteca />} />
+              <Route path="cursos" element={<CursosCatalog basePath="/professor/cursos" accent="secondary" />} />
+              <Route path="cursos/novo" element={<CursoBuilder />} />
+              <Route path="cursos/:id" element={<CursoDetalhe />} />
+              <Route path="cursos/:id/editar" element={<CursoBuilder />} />
             </Route>
 
             {/* Rota Sem Layout Específico (Tela Cheia) */}
@@ -104,7 +123,8 @@ const App = () => (
               <Route path="frequencia" element={<A.AlunoFrequencia />} />
               <Route path="materiais" element={<A.AlunoMateriais />} />
               <Route path="mural" element={<A.AlunoMural />} />
-              <Route path="mensagens" element={<A.AlunoMensagens />} />
+              <Route path="thorth" element={<Thorth />} />
+              <Route path="polis" element={<Polis />} />
               <Route path="calendario" element={<A.AlunoCalendario />} />
               <Route path="biblioteca" element={<Biblioteca />} />
               <Route path="cursos" element={<CursosCatalog basePath="/aluno/cursos" />} />
@@ -132,8 +152,12 @@ const App = () => (
               <Route path="relatorios" element={<Ad.AdminRelatorios />} />
               <Route path="auditoria" element={<Ad.AdminAuditoria />} />
               <Route path="configuracoes" element={<Ad.AdminConfiguracoes />} />
-              <Route path="integracoes" element={<Ad.AdminIntegracoes />} />
-              <Route path="mensagens" element={<A.AlunoMensagens />} />
+              <Route path="integracoes" element={<AdminIntegracoes />} />
+              <Route path="thorth" element={<Thorth />} />
+              <Route path="hermes" element={<S.AreaEscolarFinanceiro accent="accent" />} />
+              <Route path="polis" element={<Polis />} />
+              <Route path="olimpo" element={<OlimpoDashboard />} />
+              <Route path="pentaia" element={<PentaIADashboard />} />
               <Route path="biblioteca" element={<Biblioteca />} />
               <Route path="cursos" element={<S.CursosLista basePath="/admin/cursos" accent="accent" />} />
               <Route path="cursos/:id" element={<S.CursoDetalhe accent="accent" />} />
@@ -141,12 +165,6 @@ const App = () => (
               <Route path="area-escolar/eventos" element={<S.AreaEscolarEventos accent="accent" />} />
               <Route path="area-escolar/financeiro" element={<S.AreaEscolarFinanceiro accent="accent" />} />
             </Route>
-            <Route path="/professor/biblioteca" element={<Biblioteca />} />
-            <Route path="/professor/cursos" element={<CursosCatalog basePath="/professor/cursos" accent="secondary" />} />
-            <Route path="/professor/cursos/novo" element={<CursoBuilder />} />
-            <Route path="/professor/cursos/:id" element={<CursoDetalhe />} />
-            <Route path="/professor/cursos/:id/editar" element={<CursoBuilder />} />
-            <Route path="/professor/avaliacoes/vazio" element={<S.VazioAvaliacoes />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

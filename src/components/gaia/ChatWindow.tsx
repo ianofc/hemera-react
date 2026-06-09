@@ -72,16 +72,39 @@ export function ChatWindow({ chat }: ChatWindowProps) {
     }
   };
 
-  // Funções de mock para anexos ZIOS (Botões mágicos no input)
-  const sendZiosCommand = async (toolId: string) => {
-    const textToSend = inputText || "Gere um artefato sobre o tema...";
+  // Funções de mock para anexos dos Agentes da PentaIA (Botões mágicos no input)
+  const sendAgentCommand = async (agentName: string, toolId: string) => {
+    const defaultPrompts: Record<string, string> = {
+      imagem: "Gere uma imagem educacional sobre o tema...",
+      mapa_mental: "Crie um mapa mental detalhado sobre...",
+      video: "Descreva um vídeo educativo para auxiliar a aula de...",
+      plano_aula: "Gere um plano de aula completo em Markdown sobre...",
+      logs: "Analise os seguintes logs do sistema...",
+      padroes: "Identifique padrões cognitivos na atividade de...",
+      ocr: "Extraia o texto semântico estruturado desta imagem ou log...",
+      saude_sara: "Verifique o status de saúde SARA e alocação de threads...",
+      scoring: "Calcule o score heurístico do Accubens para a atividade...",
+      recursos: "Otimize a alocação de recursos de CPU...",
+      status_filas: "Mostre o status atual de mensageria das filas Pub/Sub...",
+      ws_sync: "Sincronize as instâncias conectadas via WebSockets...",
+      bus_ping: "Realize um ping de latência no barramento central Mercúrio...",
+      auditoria: "Gere um log de auditoria de acessos de segurança recentes...",
+      checar_ip: "Verifique a reputação de segurança do IP 185.220.101.5...",
+      waf_test: "Simule uma ameaça e teste as regras ativas do WAF..."
+    };
+
+    const textToSend = inputText || defaultPrompts[toolId] || "Gere um artefato sobre o tema...";
     setInputText("");
     try {
-      await gaiaService.sendMessage(chat.id, `[Comando ZIOS: ${toolId}] ${textToSend}`);
+      await gaiaService.sendMessage(chat.id, `[Comando ${agentName.toUpperCase()}: ${toolId}] ${textToSend}`);
       scrollToBottom();
     } catch (e) {
       console.error("Erro", e);
     }
+  };
+
+  const sendZiosCommand = async (toolId: string) => {
+    await sendAgentCommand("ZIOS", toolId);
   };
 
   const isPentaIA = chat.tipo.startsWith('ai_');
@@ -133,7 +156,7 @@ export function ChatWindow({ chat }: ChatWindowProps) {
         {messages.length === 0 && (
           <div className="text-center text-slate-500 mt-10">
             <div className="bg-slate-900/50 inline-block px-4 py-2 rounded-full border border-white/5">
-              Nenhuma mensagem ainda. Inicie a comunicação via GAIA.
+              Nenhuma mensagem ainda. Inicie a comunicação via Thorth.
             </div>
           </div>
         )}
@@ -187,20 +210,76 @@ export function ChatWindow({ chat }: ChatWindowProps) {
 
       {/* Barra de Input */}
       <div className="p-4 bg-slate-900 border-t border-white/5 z-10">
-        {chat.tipo === 'ai_zios' && (
+        {isPentaIA && (
           <div className="flex gap-2 mb-3 overflow-x-auto pb-1 px-1">
-            <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendZiosCommand('imagem')}>
-              <ImageIcon className="h-3 w-3 mr-1 text-pink-400" /> Imagem
-            </Button>
-            <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendZiosCommand('mapa_mental')}>
-              <MapIcon className="h-3 w-3 mr-1 text-cyan-400" /> Mapa
-            </Button>
-            <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendZiosCommand('video')}>
-              <Video className="h-3 w-3 mr-1 text-purple-400" /> Vídeo
-            </Button>
-            <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendZiosCommand('plano_aula')}>
-              <FileText className="h-3 w-3 mr-1 text-emerald-400" /> Plano
-            </Button>
+            {chat.tipo === 'ai_zios' && (
+              <>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('ZIOS', 'imagem')}>
+                  <ImageIcon className="h-3 w-3 mr-1 text-pink-400" /> Imagem
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('ZIOS', 'mapa_mental')}>
+                  <MapIcon className="h-3 w-3 mr-1 text-cyan-400" /> Mapa
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('ZIOS', 'video')}>
+                  <Video className="h-3 w-3 mr-1 text-purple-400" /> Vídeo
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('ZIOS', 'plano_aula')}>
+                  <FileText className="h-3 w-3 mr-1 text-emerald-400" /> Plano
+                </Button>
+              </>
+            )}
+            {chat.tipo === 'ai_iris' && (
+              <>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('IRIS', 'logs')}>
+                  <FileText className="h-3 w-3 mr-1 text-pink-400" /> Analisar Logs
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('IRIS', 'padroes')}>
+                  <Eye className="h-3 w-3 mr-1 text-cyan-400" /> Padrões
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('IRIS', 'ocr')}>
+                  <ImageIcon className="h-3 w-3 mr-1 text-purple-400" /> Extrair OCR
+                </Button>
+              </>
+            )}
+            {chat.tipo === 'ai_tas' && (
+              <>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('TAS', 'saude_sara')}>
+                  <Sparkles className="h-3 w-3 mr-1 text-pink-400" /> Saúde SARA
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('TAS', 'scoring')}>
+                  <Layers className="h-3 w-3 mr-1 text-cyan-400" /> Scoring
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('TAS', 'recursos')}>
+                  <Layers className="h-3 w-3 mr-1 text-purple-400" /> Recursos
+                </Button>
+              </>
+            )}
+            {chat.tipo === 'ai_mercurio' && (
+              <>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('MERCÚRIO', 'status_filas')}>
+                  <Layers className="h-3 w-3 mr-1 text-pink-400" /> Status Filas
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('MERCÚRIO', 'ws_sync')}>
+                  <Zap className="h-3 w-3 mr-1 text-cyan-400" /> WS Sync
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('MERCÚRIO', 'bus_ping')}>
+                  <Zap className="h-3 w-3 mr-1 text-purple-400" /> Bus Ping
+                </Button>
+              </>
+            )}
+            {chat.tipo === 'ai_heimdall' && (
+              <>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('HEIMDALL', 'auditoria')}>
+                  <FileText className="h-3 w-3 mr-1 text-pink-400" /> Auditoria
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('HEIMDALL', 'checar_ip')}>
+                  <Eye className="h-3 w-3 mr-1 text-cyan-400" /> Checar IP
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs bg-slate-950 border-white/10 text-slate-300 hover:text-white" onClick={() => sendAgentCommand('HEIMDALL', 'waf_test')}>
+                  <Shield className="h-3 w-3 mr-1 text-purple-400" /> Testar WAF
+                </Button>
+              </>
+            )}
           </div>
         )}
 

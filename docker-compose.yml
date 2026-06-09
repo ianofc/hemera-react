@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # O Coração: Base de Dados Relacional
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file: .env
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+
+  # O Mensageiro: Cache e WebSockets (Redis)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # O Motor: Backend Django (API)
+  backend:
+    image: hemera_workspace-backend
+    build: ./hemera_workspace/Hemera_OS/backend
+    command: python manage.py runserver --noreload 0.0.0.0:8000
+    volumes:
+      - hemera_data:/app/data # Salva o SQLite para não perder as notas!
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    environment:
+      - REDIS_HOST=redis
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=
+
+  # A Mente: PentaIA (FastAPI)
+  pentaia:
+    image: hemera_workspace-pentaia
+    build: ./hemera_workspace/Hemera_OS/pentaia
+    command: uvicorn fastapi_service.main:app --host 0.0.0.0 --port 8001
+    ports:
+      - "8001:8001"
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+      - PYTHONUNBUFFERED=1
+
+  # A Vitrine: Frontend React (Vite)
+  frontend:
+    image: hemera_workspace-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_AI_URL=http://localhost:8001
+
+volumes:
+  postgres_data:
+  pg_data:
+  hemera_data:

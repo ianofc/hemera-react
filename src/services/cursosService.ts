@@ -64,6 +64,29 @@ const mockCursos: Curso[] = [
   }
 ];
 
+const DEFAULT_MODULOS: ModuloCurso[] = [
+  {
+    id: "m_c1_1",
+    cursoId: "c1",
+    titulo: "1. Introdução e Estratégia ENEM",
+    ordem: 1,
+    aulas: [
+      { id: "a_c1_1", moduloId: "m_c1_1", titulo: "Estratégia de Resolução Matemática", duracaoMinutos: 12, tipo: "video", ordem: 1 },
+      { id: "a_c1_2", moduloId: "m_c1_1", titulo: "Tópicos Mais Recorrentes", duracaoMinutos: 8, tipo: "leitura", ordem: 2 }
+    ]
+  },
+  {
+    id: "m_c2_1",
+    cursoId: "c2",
+    titulo: "1. Configurando o Ambiente",
+    ordem: 1,
+    aulas: [
+      { id: "a_c2_1", moduloId: "m_c2_1", titulo: "Instalação do Python e VS Code", duracaoMinutos: 15, tipo: "video", ordem: 1 },
+      { id: "a_c2_2", moduloId: "m_c2_1", titulo: "Variáveis e Operadores Básicos", duracaoMinutos: 20, tipo: "video", ordem: 2 }
+    ]
+  }
+];
+
 export const cursosService = {
   
   async getCatalogo(): Promise<Curso[]> {
@@ -74,7 +97,7 @@ export const cursosService = {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (!data || data.length === 0) return mockCursos;
+      if (!data || data.length === 0) throw new Error("Empty db");
 
       return data.map(c => ({
         id: c.id,
@@ -91,8 +114,13 @@ export const cursosService = {
         rating: Number(c.rating)
       }));
     } catch (e) {
-      console.warn("Tabelas de cursos não criadas ainda no Supabase. Usando fallback.", e);
-      return mockCursos;
+      console.warn("Tabelas de cursos não criadas ainda no Supabase. Usando fallback local.", e);
+      const local = localStorage.getItem("hemera_cursos");
+      if (!local) {
+        localStorage.setItem("hemera_cursos", JSON.stringify(mockCursos));
+        return mockCursos;
+      }
+      return JSON.parse(local);
     }
   },
 
@@ -122,7 +150,9 @@ export const cursosService = {
         rating: Number(data.rating)
       };
     } catch (e) {
-      return mockCursos.find(c => c.id === id) || null;
+      const local = localStorage.getItem("hemera_cursos");
+      const list: Curso[] = local ? JSON.parse(local) : mockCursos;
+      return list.find(c => c.id === id) || null;
     }
   },
 
@@ -135,7 +165,7 @@ export const cursosService = {
         .order('ordem', { ascending: true });
 
       if (modError) throw modError;
-      if (!modulosData) return [];
+      if (!modulosData || modulosData.length === 0) throw new Error("Empty modulos");
 
       const result: ModuloCurso[] = [];
       for (const m of modulosData) {
@@ -164,13 +194,12 @@ export const cursosService = {
 
       return result;
     } catch (e) {
-      return [
-        {
-          id: "m_fake", cursoId, titulo: "Módulo Introdutório (Demo)", ordem: 1, aulas: [
-            { id: "a_fake1", moduloId: "m_fake", titulo: "Bem-vindo ao curso", duracaoMinutos: 5, tipo: "video", ordem: 1 }
-          ]
-        }
-      ];
+      const local = localStorage.getItem("hemera_cursos_modulos");
+      const list: ModuloCurso[] = local ? JSON.parse(local) : DEFAULT_MODULOS;
+      if (!local) {
+        localStorage.setItem("hemera_cursos_modulos", JSON.stringify(DEFAULT_MODULOS));
+      }
+      return list.filter(m => m.cursoId === cursoId);
     }
   },
 
@@ -241,6 +270,196 @@ export const cursosService = {
     } catch (e) {
       console.error(e);
       return true; // Fallback success para testes sem DB
+    }
+  },
+
+  async criarCurso(titulo: string, descricao: string, categoria: string, preco: number, imagemCapa: string, modulos: ModuloCurso[]): Promise<Curso> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from('cursos')
+        .insert({
+          titulo,
+          descricao,
+          categoria,
+          preco,
+          imagem_capa: imagemCapa,
+          is_gratis: preco === 0,
+          instrutor_nome: user?.user_metadata?.first_name || 'Professor',
+          instrutor_avatar: user?.user_metadata?.avatar_url || '',
+          alunos_inscritos: 0,
+          carga_horaria: modulos.reduce((acc, m) => acc + m.aulas.reduce((sum, a) => sum + a.duracaoMinutos, 0), 0) / 60,
+          rating: 5.0
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      
+      // Save modules
+      for (const m of modulos) {
+        const { data: modData } = await supabase.from('modulos').insert({ curso_id: data.id, titulo: m.titulo, ordem: m.ordem }).select().single();
+        if (modData) {
+          for (const a of m.aulas) {
+            await supabase.from('aulas').insert({ modulo_id: modData.id, titulo: a.titulo, duracao_minutos: a.duracaoMinutos, tipo: a.tipo, ordem: a.ordem, exige_entrega: a.exigeEntrega });
+          }
+        }
+      }
+      return {
+        id: data.id,
+        titulo: data.titulo,
+        descricao: data.descricao,
+        instrutor: data.instrutor_nome,
+        instrutorAvatar: data.instrutor_avatar,
+        categoria: data.categoria,
+        imagemCapa: data.imagem_capa,
+        isGratis: data.is_gratis,
+        preco: Number(data.preco),
+        alunosInscritos: data.alunos_inscritos,
+        cargaHoraria: data.carga_horaria,
+        rating: Number(data.rating)
+      };
+    } catch (e) {
+      console.warn("Erro ao criar curso no Supabase. Salvando localmente.", e);
+      const local = localStorage.getItem("hemera_cursos");
+      const list: Curso[] = local ? JSON.parse(local) : mockCursos;
+      
+      const novoId = `c_${Date.now()}`;
+      const novoCurso: Curso = {
+        id: novoId,
+        titulo,
+        descricao,
+        instrutor: "Professor Local",
+        instrutorAvatar: "https://i.pravatar.cc/150?u=prof_local",
+        categoria,
+        imagemCapa,
+        isGratis: preco === 0,
+        preco,
+        alunosInscritos: 0,
+        cargaHoraria: Math.round(modulos.reduce((acc, m) => acc + m.aulas.reduce((sum, a) => sum + a.duracaoMinutos, 0), 0) / 60) || 5,
+        rating: 5.0
+      };
+      
+      localStorage.setItem("hemera_cursos", JSON.stringify([...list, novoCurso]));
+      
+      // Save modules
+      const localMods = localStorage.getItem("hemera_cursos_modulos");
+      const currentMods: ModuloCurso[] = localMods ? JSON.parse(localMods) : DEFAULT_MODULOS;
+      
+      const savedMods = modulos.map((m, idx) => ({
+        ...m,
+        id: m.id || `m_${Date.now()}_${idx}`,
+        cursoId: novoId,
+        aulas: m.aulas.map((a, aidx) => ({
+          ...a,
+          id: a.id || `a_${Date.now()}_${idx}_${aidx}`,
+          moduloId: m.id || `m_${Date.now()}_${idx}`
+        }))
+      }));
+      
+      localStorage.setItem("hemera_cursos_modulos", JSON.stringify([...currentMods, ...savedMods]));
+      return novoCurso;
+    }
+  },
+
+  async editarCurso(id: string, updates: Partial<Curso>, modulos?: ModuloCurso[]): Promise<Curso> {
+    try {
+      const { data, error } = await supabase
+        .from('cursos')
+        .update({
+          titulo: updates.titulo,
+          descricao: updates.descricao,
+          categoria: updates.categoria,
+          preco: updates.preco,
+          is_gratis: updates.preco === 0,
+          imagem_capa: updates.imagemCapa,
+          carga_horaria: updates.cargaHoraria
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+
+      if (modulos) {
+        // Simple update: delete and recreate modules for this course
+        await supabase.from('modulos').delete().eq('curso_id', id);
+        for (const m of modulos) {
+          const { data: modData } = await supabase.from('modulos').insert({ curso_id: id, titulo: m.titulo, ordem: m.ordem }).select().single();
+          if (modData) {
+            for (const a of m.aulas) {
+              await supabase.from('aulas').insert({ modulo_id: modData.id, titulo: a.titulo, duracao_minutos: a.duracaoMinutos, tipo: a.tipo, ordem: a.ordem, exige_entrega: a.exigeEntrega });
+            }
+          }
+        }
+      }
+
+      return {
+        id: data.id,
+        titulo: data.titulo,
+        descricao: data.descricao,
+        instrutor: data.instrutor_nome,
+        instrutorAvatar: data.instrutor_avatar,
+        categoria: data.categoria,
+        imagemCapa: data.imagem_capa,
+        isGratis: data.is_gratis,
+        preco: Number(data.preco),
+        alunosInscritos: data.alunos_inscritos,
+        cargaHoraria: data.carga_horaria,
+        rating: Number(data.rating)
+      };
+    } catch (e) {
+      console.warn("Erro ao editar curso no Supabase. Editando localmente.", e);
+      const local = localStorage.getItem("hemera_cursos");
+      const list: Curso[] = local ? JSON.parse(local) : mockCursos;
+      
+      let updated: Curso | null = null;
+      const nextList = list.map(c => {
+        if (c.id === id) {
+          updated = { ...c, ...updates };
+          return updated;
+        }
+        return c;
+      });
+      localStorage.setItem("hemera_cursos", JSON.stringify(nextList));
+
+      if (modulos) {
+        const localMods = localStorage.getItem("hemera_cursos_modulos");
+        const currentMods: ModuloCurso[] = localMods ? JSON.parse(localMods) : DEFAULT_MODULOS;
+        
+        // Remove current modules for this course
+        const otherMods = currentMods.filter(m => m.cursoId !== id);
+        
+        const savedMods = modulos.map((m, idx) => ({
+          ...m,
+          id: m.id || `m_${Date.now()}_${idx}`,
+          cursoId: id,
+          aulas: m.aulas.map((a, aidx) => ({
+            ...a,
+            id: a.id || `a_${Date.now()}_${idx}_${aidx}`,
+            moduloId: m.id || `m_${Date.now()}_${idx}`
+          }))
+        }));
+        
+        localStorage.setItem("hemera_cursos_modulos", JSON.stringify([...otherMods, ...savedMods]));
+      }
+
+      if (!updated) throw new Error("Curso não encontrado localmente");
+      return updated;
+    }
+  },
+
+  async deletarCurso(id: string): Promise<void> {
+    try {
+      const { error } = await supabase.from('cursos').delete().eq('id', id);
+      if (error) throw error;
+    } catch (e) {
+      console.warn("Erro ao deletar curso no Supabase. Deletando localmente.", e);
+      const local = localStorage.getItem("hemera_cursos");
+      const list: Curso[] = local ? JSON.parse(local) : mockCursos;
+      localStorage.setItem("hemera_cursos", JSON.stringify(list.filter(c => c.id !== id)));
+
+      const localMods = localStorage.getItem("hemera_cursos_modulos");
+      const currentMods: ModuloCurso[] = localMods ? JSON.parse(localMods) : DEFAULT_MODULOS;
+      localStorage.setItem("hemera_cursos_modulos", JSON.stringify(currentMods.filter(m => m.cursoId !== id)));
     }
   }
 };

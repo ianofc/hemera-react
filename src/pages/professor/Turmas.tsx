@@ -15,9 +15,9 @@ export default function Turmas() {
     try {
       const data = await pedagogicoService.getTurmasProfessor();
       setTurmas(data);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      const err = error as Error;
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -25,8 +25,14 @@ export default function Turmas() {
 
   const remover = async (id: string) => {
     if (!confirm("Excluir esta turma?")) return;
-    const { error } = await supabase.from("turmas").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Turma excluída."); load(); }
+    try {
+      await pedagogicoService.deletarTurma(id);
+      toast.success("Turma excluída.");
+      load();
+    } catch (error) {
+      const err = error as Error;
+      toast.error(err.message || "Erro ao excluir turma.");
+    }
   };
 
   return (

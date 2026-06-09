@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { pedagogicoService } from "@/services/pedagogicoService";
 
 export default function TurmaForm() {
   const { id } = useParams();
@@ -17,7 +17,7 @@ export default function TurmaForm() {
   useEffect(() => {
     document.title = `${isEdit ? "Editar" : "Nova"} Turma | Hemera`;
     if (isEdit) {
-      supabase.from("turmas").select("*").eq("id", id).single().then(({ data }) => {
+      pedagogicoService.getTurmaById(id).then((data) => {
         if (data) { setNome(data.nome); setAno(data.ano_letivo); setPeriodo(data.periodo); }
       });
     }
@@ -27,13 +27,21 @@ export default function TurmaForm() {
     e.preventDefault();
     if (!user) return;
     setLoading(true);
-    const payload = { nome, ano_letivo: ano, periodo, professor_id: user.id };
-    const { error } = isEdit
-      ? await supabase.from("turmas").update(payload).eq("id", id)
-      : await supabase.from("turmas").insert(payload);
-    setLoading(false);
-    if (error) toast.error(error.message);
-    else { toast.success(isEdit ? "Turma atualizada." : "Turma criada."); navigate("/professor/turmas"); }
+    try {
+      if (isEdit) {
+        await pedagogicoService.editarTurma(id, { nome, ano_letivo: ano, periodo });
+        toast.success("Turma atualizada.");
+      } else {
+        await pedagogicoService.criarTurma(nome, ano, periodo);
+        toast.success("Turma criada.");
+      }
+      navigate("/professor/turmas");
+    } catch (error) {
+      const err = error as Error;
+      toast.error(err.message || "Erro ao salvar dados da turma.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

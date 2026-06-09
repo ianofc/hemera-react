@@ -1,7 +1,10 @@
+import React, { useState, useEffect } from "react";
 import MockScreen from "@/components/MockScreen";
 import {
   turmas, disciplinas, alunos, avaliacoes, trilhaNotas, historicoIA, professores,
 } from "@/data/mockData";
+import { toast } from "sonner";
+import { Save, Check, X, FileText, ChevronRight, AlertCircle, Edit, ListTodo } from "lucide-react";
 
 const turmaFilters = ["Matutino", "Vespertino", "Noturno"];
 
@@ -104,20 +107,142 @@ export const ProfAvaliacaoDetalhe = () => {
   );
 };
 
-export const ProfLancamentoNotas = () => (
-  <MockScreen
-    title="Lançamento de Notas" subtitle="Insira ou revise notas por aluno" icon="fa-pen-to-square"
-    variant="list"
-    columns={["Aluno", "Matrícula", "Nota", "Status", "Última alteração"]}
-    filters={["Lançada", "Pendente"]}
-    searchPlaceholder="Buscar aluno..."
-    rows={alunos.map((a, i) => ({
-      id: a.id,
-      cols: [a.nome, a.matricula, a.notaMedia.toFixed(1), i % 3 === 2 ? "Pendente" : "Lançada", i % 3 === 2 ? "—" : "hoje, 09:12"],
-    }))}
-    emptyTitle="Nenhum aluno na turma"
-  />
-);
+export const ProfLancamentoNotas = () => {
+  const [notas, setNotas] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem("hemera_professor_notas");
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"Todos" | "Lançada" | "Pendente">("Todos");
+
+  const handleNotaChange = (alunoId: string, valor: string) => {
+    const num = parseFloat(valor);
+    if (valor !== "" && (isNaN(num) || num < 0 || num > 10)) {
+      toast.error("A nota deve ser um número entre 0.0 e 10.0");
+      return;
+    }
+    const nextNotas = { ...notas, [alunoId]: valor };
+    setNotas(nextNotas);
+    localStorage.setItem("hemera_professor_notas", JSON.stringify(nextNotas));
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent, alunoNome: string) => {
+    if (e.key === "Enter") {
+      (e.target as HTMLInputElement).blur();
+      toast.success(`Nota de ${alunoNome} atualizada com sucesso!`);
+    }
+  };
+
+  const filteredAlunos = alunos.filter((a) => {
+    const matchesSearch = a.nome.toLowerCase().includes(search.toLowerCase()) || a.matricula.includes(search);
+    const notaExistente = notas[a.id] !== undefined && notas[a.id] !== "";
+    const status = notaExistente ? "Lançada" : "Pendente";
+    const matchesFilter = filter === "Todos" || status === filter;
+    return matchesSearch && matchesFilter;
+  });
+
+  return (
+    <div className="max-w-7xl mx-auto px-6 pb-20 pt-8 animate-fade-in-down text-left">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 glass-island rounded-3xl mb-8">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center justify-center w-14 h-14 text-white shadow-neon rounded-2xl bg-gradient-to-br from-aurora-primary to-aurora-secondary">
+            <i className="text-xl fas fa-pen-to-square" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 font-display">Lançamento de Notas</h1>
+            <p className="text-sm text-slate-500">Insira ou revise notas por aluno em tempo real</p>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between glass-island rounded-2xl mb-6">
+        <div className="relative flex-1 max-w-md">
+          <i className="absolute -translate-y-1/2 left-4 top-1/2 fas fa-search text-slate-400 text-xs" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar aluno..."
+            className="w-full py-2.5 pl-10 pr-4 text-sm border bg-white/70 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-aurora-secondary"
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {(["Todos", "Lançada", "Pendente"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition border ${
+                filter === f
+                  ? "text-white border-transparent bg-gradient-to-r from-aurora-primary to-aurora-secondary shadow-sm"
+                  : "bg-white/70 text-slate-600 border-slate-200 hover:bg-white"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="overflow-hidden glass-island rounded-3xl">
+        {filteredAlunos.length === 0 ? (
+          <div className="py-16 text-center text-slate-400">
+            <AlertCircle className="w-10 h-10 mx-auto mb-2 opacity-50" />
+            <p className="text-xs font-bold">Nenhum aluno encontrado</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-white/40 border-b border-slate-150">
+              <tr className="text-slate-500 uppercase text-[10px] tracking-wider font-extrabold">
+                <th className="px-5 py-3.5 text-left">Aluno</th>
+                <th className="px-5 py-3.5 text-left">Matrícula</th>
+                <th className="px-5 py-3.5 text-left">Nota (0.0 - 10.0)</th>
+                <th className="px-5 py-3.5 text-left">Status</th>
+                <th className="px-5 py-3.5 text-left">Última alteração</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white/50">
+              {filteredAlunos.map((a) => {
+                const notaVal = notas[a.id] ?? "";
+                const isLancada = notaVal !== "";
+                return (
+                  <tr key={a.id} className="hover:bg-white/40 transition">
+                    <td className="px-5 py-4 font-bold text-slate-700">{a.nome}</td>
+                    <td className="px-5 py-4 text-slate-550 font-semibold">{a.matricula}</td>
+                    <td className="px-5 py-4">
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        step="0.1"
+                        value={notaVal}
+                        onChange={(e) => handleNotaChange(a.id, e.target.value)}
+                        onKeyDown={(e) => handleKeyPress(e, a.nome)}
+                        placeholder="Clique para digitar..."
+                        className="w-32 px-3 py-1.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/25 bg-white font-bold text-slate-800"
+                      />
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                        isLancada 
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                          : 'bg-amber-100 text-amber-800 border border-amber-200'
+                      }`}>
+                        {isLancada ? "Lançada" : "Pendente"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-slate-400 font-semibold text-xs">
+                      {isLancada ? "agora mesmo" : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const ProfRevisaoNotas = () => (
   <MockScreen
@@ -201,19 +326,148 @@ export const ProfChamada = () => (
   />
 );
 
-export const ProfJustificativas = () => (
-  <MockScreen
-    title="Justificativas" icon="fa-file-pen" variant="list"
-    columns={["Aluno", "Data", "Motivo", "Status", "Ações"]}
-    filters={["Pendente", "Aprovada", "Rejeitada"]}
-    searchPlaceholder="Buscar aluno..."
-    rows={[
-      { id: "j1", cols: [alunos[3].nome, "02/05/2026", "Atestado médico", "Aprovada", "Ver"] },
-      { id: "j2", cols: [alunos[5].nome, "30/04/2026", "Consulta", "Pendente", "Aprovar · Rejeitar"] },
-      { id: "j3", cols: [alunos[1].nome, "28/04/2026", "Compromisso familiar", "Rejeitada", "Ver"] },
-    ]}
-  />
-);
+export const ProfJustificativas = () => {
+  const [justificativas, setJustificativas] = useState<{ id: string; aluno: string; data: string; motivo: string; status: string }[]>(() => {
+    const saved = localStorage.getItem("hemera_justificativas");
+    if (saved) return JSON.parse(saved);
+    const initial = [
+      { id: "j1", aluno: alunos[3].nome, data: "02/05/2026", motivo: "Atestado médico", status: "Aprovada" },
+      { id: "j2", aluno: alunos[5].nome, data: "30/04/2026", motivo: "Consulta", status: "Pendente" },
+      { id: "j3", aluno: alunos[1].nome, data: "28/04/2026", motivo: "Compromisso familiar", status: "Rejeitada" },
+    ];
+    localStorage.setItem("hemera_justificativas", JSON.stringify(initial));
+    return initial;
+  });
+
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"Todos" | "Pendente" | "Aprovada" | "Rejeitada">("Todos");
+
+  const handleUpdateStatus = (id: string, newStatus: "Aprovada" | "Rejeitada") => {
+    const updated = justificativas.map(j => j.id === id ? { ...j, status: newStatus } : j);
+    setJustificativas(updated);
+    localStorage.setItem("hemera_justificativas", JSON.stringify(updated));
+    
+    if (newStatus === "Aprovada") {
+      toast.success("Justificativa de falta aprovada!");
+    } else {
+      toast.error("Justificativa de falta rejeitada!");
+    }
+  };
+
+  const filteredJustificativas = justificativas.filter((j) => {
+    const matchesSearch = j.aluno.toLowerCase().includes(search.toLowerCase()) || j.motivo.toLowerCase().includes(search.toLowerCase());
+    const matchesFilter = filter === "Todos" || j.status === filter;
+    return matchesSearch && matchesFilter;
+  });
+
+  return (
+    <div className="max-w-7xl mx-auto px-6 pb-20 pt-8 animate-fade-in-down text-left">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 glass-island rounded-3xl mb-8">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center justify-center w-14 h-14 text-white shadow-neon rounded-2xl bg-gradient-to-br from-aurora-primary to-aurora-secondary">
+            <i className="text-xl fas fa-file-pen" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 font-display">Justificativas de Faltas</h1>
+            <p className="text-sm text-slate-500">Aprove ou rejeite justificativas enviadas pelos alunos</p>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between glass-island rounded-2xl mb-6">
+        <div className="relative flex-1 max-w-md">
+          <i className="absolute -translate-y-1/2 left-4 top-1/2 fas fa-search text-slate-400 text-xs" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por aluno ou motivo..."
+            className="w-full py-2.5 pl-10 pr-4 text-sm border bg-white/70 border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-aurora-secondary"
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {(["Todos", "Pendente", "Aprovada", "Rejeitada"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition border ${
+                filter === f
+                  ? "text-white border-transparent bg-gradient-to-r from-aurora-primary to-aurora-secondary shadow-sm"
+                  : "bg-white/70 text-slate-600 border-slate-200 hover:bg-white"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="overflow-hidden glass-island rounded-3xl">
+        {filteredJustificativas.length === 0 ? (
+          <div className="py-16 text-center text-slate-400">
+            <AlertCircle className="w-10 h-10 mx-auto mb-2 opacity-50" />
+            <p className="text-xs font-bold">Nenhuma justificativa encontrada</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-white/40 border-b border-slate-150">
+              <tr className="text-slate-500 uppercase text-[10px] tracking-wider font-extrabold">
+                <th className="px-5 py-3.5 text-left">Aluno</th>
+                <th className="px-5 py-3.5 text-left">Data do Afastamento</th>
+                <th className="px-5 py-3.5 text-left">Motivo / Anexo</th>
+                <th className="px-5 py-3.5 text-left">Status</th>
+                <th className="px-5 py-3.5 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white/50">
+              {filteredJustificativas.map((j) => {
+                const isPendente = j.status === "Pendente";
+                return (
+                  <tr key={j.id} className="hover:bg-white/40 transition">
+                    <td className="px-5 py-4 font-bold text-slate-700">{j.aluno}</td>
+                    <td className="px-5 py-4 text-slate-550 font-semibold">{j.data}</td>
+                    <td className="px-5 py-4 text-slate-750 font-semibold flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-indigo-500 shrink-0" />
+                      <span>{j.motivo}</span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                        j.status === "Aprovada" ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                        j.status === "Rejeitada" ? 'bg-red-100 text-red-800 border border-red-200' :
+                        'bg-amber-100 text-amber-800 border border-amber-200'
+                      }`}>
+                        {j.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      {isPendente ? (
+                        <div className="flex justify-end gap-1.5 text-xs font-bold">
+                          <button
+                            onClick={() => handleUpdateStatus(j.id, "Rejeitada")}
+                            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-650 rounded-xl transition border border-red-200 flex items-center gap-0.5"
+                          >
+                            <X className="w-3.5 h-3.5" /> Rejeitar
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(j.id, "Aprovada")}
+                            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-750 rounded-xl transition border border-emerald-250 flex items-center gap-0.5"
+                          >
+                            <Check className="w-3.5 h-3.5" /> Aprovar
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 font-bold pr-3 text-xs">Concluído</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const ProfPlanejamento = () => (
   <MockScreen title="Planejamento" subtitle="Planos de aula e cronograma" icon="fa-calendar-alt" variant="calendar" />

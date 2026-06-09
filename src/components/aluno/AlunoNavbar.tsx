@@ -11,6 +11,9 @@ const links = [
   { to: "/aluno/cursos", icon: "fas fa-graduation-cap", label: "Cursos" },
   { to: "/aluno/biblioteca", icon: "fas fa-book-bookmark", label: "Biblioteca" },
   { to: "/aluno/area-escolar", icon: "fas fa-school-flag", label: "Área Escolar" },
+  { to: "/aluno/thorth", icon: "fas fa-comments", label: "Thorth" },
+  { to: "/aluno/polis", icon: "fas fa-bullhorn", label: "Polis" },
+  { to: "/hemera-lm", icon: "fas fa-brain", label: "HemeraLM" },
 ];
 
 export const AlunoNavbar = () => {

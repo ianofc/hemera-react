@@ -9,6 +9,12 @@ const links = [
   { to: "/admin/cursos", icon: "fas fa-graduation-cap", label: "Cursos" },
   { to: "/admin/biblioteca", icon: "fas fa-book-bookmark", label: "Biblioteca" },
   { to: "/admin/area-escolar", icon: "fas fa-school-flag", label: "Área Escolar" },
+  { to: "/admin/thorth", icon: "fas fa-comments", label: "Thorth" },
+  { to: "/admin/hermes", icon: "fas fa-coins", label: "Hermes" },
+  { to: "/admin/polis", icon: "fas fa-bullhorn", label: "Polis" },
+  { to: "/admin/olimpo", icon: "fas fa-crown", label: "Olimpo" },
+  { to: "/admin/pentaia", icon: "fas fa-brain", label: "PentaIA" },
+  { to: "/hemera-lm", icon: "fas fa-brain", label: "HemeraLM" },
 ];
 
 export const AdminNavbar = () => {
