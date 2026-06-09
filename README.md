@@ -45,32 +45,70 @@ Caso você não possua chaves SMTP configuradas ou tenha problemas de conexão c
 
 ---
 
-## 🎨 Recursos & Módulos Implementados
+## 🎨 Recursos & Módulos Implementados (Pente Fino de QA)
+
+O ecossistema foi refatorado para habilitar **interatividade completa** por meio de um sistema híbrido de chamadas de API reais e simulações robustas persistidas localmente.
 
 ### 🖥️ 1. Landing Page do Hemera OS (Raiz `/`)
 - Menu superior de navegação com dropdowns reativos de **Recursos** (Gestão, Biblioteca, Chamada) e **IA Educacional** (RAG, ZIOS).
-- Estatísticas do MEC com cards de conformidade à BNCC, índice de evasão prevido pela IA e aproveitamento escolar médio.
+- Estatísticas do MEC com cards de conformidade à BNCC, índice de evasão previsto pela IA e aproveitamento escolar médio.
 - Seção de vitrines interativas descrevendo a infraestrutura dos subagentes.
 
 ### 📐 2. Painel do Professor (`/professor`)
-- **Barra Lateral Esquerda**: Perfil docente do professor logado (foto, cargo, matrícula), widget com clima em tempo real em Seabra - BA (26°C, Nublado) e quadro de lembretes/prazos urgentes.
-- **Acesso Rápido**: Atalhos em grid de alta legibilidade para *Lançar Notas*, *Registrar Chamada*, *Plano de Aula*, *Gerador de Provas* e *Biblioteca Digital*.
-- **Grade Semanal**: Tabela responsiva de horários organizada por períodos (Manhã, Tarde e Noite) com renderização de aulas de cada turma.
+- **Lançamento Rápido de Notas**: Inputs numéricos reais por aluno com validação de limite (0 a 10). O salvamento é efetuado ao pressionar *Enter* ou perder o foco (`onBlur`), atualizando o status para "Lançada" no `localStorage` (`hemera_professor_notas`).
+- **Justificativas de Falta**: Aprovação/rejeição de atestados ou justificativas acadêmicas em tempo real, gravando o novo status na tabela local.
+- **Grade Semanal**: Tabela responsiva de horários organizada por períodos (Manhã, Tarde e Noite) com renderização de aulas.
 
 ### 📊 3. Painel da Turma & Cronograma (`/professor/turmas/:id`)
-- **Visão Geral da Turma**:
-  - **Métricas**: Cards contendo total de alunos matriculados, número de atividades planejadas e taxa de frequência média.
-  - **Situação Acadêmica**: Gráfico donut circular estilizado mostrando a relação de alunos Aprovados (80%), Em Recuperação (15%) e Reprovados (5%).
-  - **Coluna de Alunos (Esquerda)**: Lista interativa com as médias gerais e frequência de cada estudante.
-  - **Coluna do Cronograma (Direita)**: Linha do tempo vertical animada contendo tarefas escolares, simulados e provas bimestrais com status ("Concluído", "Pendente" ou "Agendado").
-- **Mural da Turma**: Feed social com avisos do professor, likes, comentários e suporte a anexos de arquivos.
-- **Chamada Rápida**: Controle de presença diário com persistência automática no banco.
-- **Diário de Classe**: Registro do que foi lecionado em cada aula com base no cronograma BNCC.
+- **Visão Geral da Turma**: Métricas reativas (alunos matriculados, atividades planejadas, frequência média) e gráficos de situação acadêmica (Aprovados/Em Recuperação).
+- **Mural da Turma**: Feed social interativo com suporte a likes, comentários e anexos de arquivos.
+- **Chamada Rápida**: Registro diário de presença persistido automaticamente no banco.
 
-### 📚 4. Biblioteca Digital Universal
-- Busca integrada de livros e obras literárias de domínio público.
-- Tratamento robusto de erros e sanitização da API do Google Books com encadeamento opcional para evitar quebras de visual.
-- Fallback automático para o acervo de obras nacionais (Machado de Assis, Aluísio Azevedo, etc.) caso a API externa sofra restrição ou queda.
+### 📘 4. Biblioteca Digital Universal (Interativa)
+- Busca integrada de livros e obras literárias através da API do Google Books.
+- **Reservas & Devoluções Reativas**: Ações de reservar e devolver livros totalmente interativas, atualizando o grid local com um badge visual de *"Reservado"* e salvando o estado no `localStorage` (`hemera_biblioteca`).
+- Fallback automático para o acervo de obras clássicas de domínio público caso a API externa sofra queda.
+
+### 📂 5. Moodle Integrado (Pólis)
+- **Validação Estrita de Uploads**: Campo de upload real substitui a entrada de texto e aplica filtros rígidos de QA:
+  - **Limite de Tamanho**: Bloqueia arquivos maiores que **10MB**.
+  - **Extensões Permitidas**: Rejeita formatos não homologados, aceitando estritamente `.pdf`, `.zip`, `.docx` e `.png`.
+  - Exibe feedbacks via Toast e anexa os arquivos validados diretamente à tarefa.
+
+### 💰 6. Área Financeira & Secretaria Virtual
+- **Área Financeira**:
+  - Exibição de faturas escolares com status dinâmicos.
+  - **Boleto Bancário**: Modal com código de barras gerado via SVG e opção de simulação de impressão/PDF.
+  - **Pagamento Pix**: Geração dinâmica de QR Code em SVG, chave copia-e-cola com feedback visual e toast informativo.
+  - A quitação de faturas atualiza a tabela e persiste em `localStorage` (`hemera_financeiro_faturas`).
+- **Secretaria Virtual**:
+  - Formulário para solicitação de documentos (Histórico Escolar, Declaração, etc.).
+  - Cadastro de solicitações persistido no `localStorage` com cálculo automático de prazo (2 dias úteis) e status "Pendente".
+
+### 🏫 7. Matrículas & Emissão de Documentos (Gestão/Admin)
+- **Fluxo de Matrícula**: Formulário para matricular novos alunos associando-os a turmas, salvando as informações no `localStorage` (`hemera_admin_matriculas`).
+- **Declaração de Matrícula**: Renderização de papel timbrado com assinatura digital e carimbo de autenticidade emitidos de forma criptográfica pelo sentinela **Heimdall**.
+
+### 💬 8. Thorth Messenger (Telegram Web)
+- Interface de chat que simula o Telegram Web integrada ao backend Django via `/core/api/chat/`.
+- **Anexos Visuais**: Suporte ao envio de mídias (documentos PDF, imagens ou notas de áudio), renderizando cards interativos específicos para cada tipo de mídia dentro da bolha de conversa.
+- **Bot de IA Integrado**: Respostas automáticas em tempo real geradas pelo assistente ZIOS Bridge.
+
+### 🔮 9. HemeraLM (Grounding IA com PentaIA)
+- **Chat Conectado**: Requisições reais POST para `${AI_URL}/v1/chat/interact` com cabeçalho `x-service-token` de segurança para grounding na BNCC.
+- **Fallback Offline**: Fallback inteligente que simula as respostas caso o container de IA esteja indisponível, garantindo fluidez.
+- **Anotações Persistentes**: Bloco de notas persistente integrado no painel lateral salvando anotações no `localStorage` (`hemera_notes`).
+
+---
+
+## 🔌 Orquestração de Dados & Serviços (Docker)
+
+O ecossistema divide-se em 5 contêineres:
+1. **db** (`postgres:15`): Banco relacional central.
+2. **redis** (`redis:7-alpine`): Cache e gerenciamento de camadas de websockets do Django Channels.
+3. **backend** (Django API): Roda o Daphne (ASGI) na porta `8000`. Detecta dinamicamente a presença do `DATABASE_URL` no compose, utilizando o SQLite local (`db.sqlite3`) para fins de teste no container do backend caso a conexão com Postgres sofra instabilidade.
+4. **pentaia** (FastAPI): Roda na porta `8001`. Provê os endpoints cognitivos e de RAG.
+5. **frontend** (Vite/React): Servidor de desenvolvimento exposto na porta `5173`.
 
 ---
 
@@ -81,7 +119,7 @@ Para executar a suíte de testes unitários e de integração do frontend localm
 ```bash
 npm run test
 ```
-*Garante que todos os 20 cenários de testes do painel continuam íntegros.*
+*Garante que todos os cenários de testes do painel e serviços continuam íntegro.*
 
 ### Validação de Tipos (TypeScript)
 Para assegurar a integridade do código fonte e a ausência de erros de build:
